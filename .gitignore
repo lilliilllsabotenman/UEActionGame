@@ -1,0 +1,35 @@
+# Unreal Engine generated/derived folders
+/Binaries
+/Build
+/DerivedDataCache
+/Intermediate
+/Saved
+/BuildData
+
+# Content (assets) - excluded due to size, tracked outside git
+/Content
+
+# Backups
+/Backup
+/Backup1
+/Backup2
+
+# IDE / tooling
+/.vs
+/.vscode
+/.claude
+/.idea
+*.sln
+*.suo
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.opendb
+
+# Generated logs / scratch
+UpgradeLog*.htm
+Temp.txt
+
+# OS files
+.DS_Store
+Thumbs.db
