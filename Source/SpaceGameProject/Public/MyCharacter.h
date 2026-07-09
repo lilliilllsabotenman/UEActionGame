@@ -9,7 +9,6 @@
 #include "ChangeGravityComponent.h"
 #include "LocalOffsetSpringArmComponent.h"
 #include "RotationCompositorComponent.h"
-#include "InertialLeanComponent.h"
 #include "GameRuleComponent.h"
 #include "GoalTrackerComponent.h"
 
