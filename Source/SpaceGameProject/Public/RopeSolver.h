@@ -17,6 +17,7 @@ public:
 
 	// Leans "up" away from the pulling force, keeping Forward as the facing direction.
 	// Identity when PullingForce is (near) zero.
+	// Forward が縮退方向に近い場合はワールド軸にフォールバックする
 	static FQuat SolveRotation(
 		const FVector& PullingForce,
 		const FVector& Forward
