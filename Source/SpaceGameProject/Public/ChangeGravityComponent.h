@@ -3,7 +3,6 @@
 #pragma once
 
 #include "MyMovementComponent.h"
-#include "PlanterComponent.h"
 #include "RotationEventHub.h"
 
 #include "CoreMinimal.h"
