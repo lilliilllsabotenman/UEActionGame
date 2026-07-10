@@ -7,7 +7,6 @@
 #include "InputMappingContext.h"
 #include "Blueprint/UserWidget.h"
 #include "SpaceGameProject.h"
-#include "UI/CLIScreenWidget.h"
 #include "Widgets/Input/SVirtualJoystick.h"
 
 void ASpaceGameProjectPlayerController::BeginPlay()
@@ -31,21 +30,6 @@ void ASpaceGameProjectPlayerController::BeginPlay()
 
 		}
 
-	}
-
-	// only spawn the CLI screen on local player controllers, and only if a class is configured
-	if (IsLocalPlayerController() && CLIScreenWidgetClass)
-	{
-		CLIScreenWidget = CreateWidget<UCLIScreenWidget>(this, CLIScreenWidgetClass);
-
-		if (CLIScreenWidget)
-		{
-			CLIScreenWidget->AddToViewport();
-		} else {
-
-			UE_LOG(LogSpaceGameProject, Error, TEXT("Could not spawn CLI screen widget."));
-
-		}
 	}
 }
 
