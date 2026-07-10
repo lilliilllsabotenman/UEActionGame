@@ -138,6 +138,7 @@ PlayerRopeState AMyCharacter::GetPlayerRopeState() const
 	{
 		if (Rope->IsHooked())
 		{
+			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Rope"));
 			return PlayerRopeState::Rope;
 		}
 	}

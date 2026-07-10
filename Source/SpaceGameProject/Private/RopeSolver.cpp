@@ -36,7 +36,7 @@ FVector RopeSolver::SolveForce(
 
 FQuat RopeSolver::SolveRotation(
 	const FVector& PullingForce,
-	const FVector& Forward
+	const FVector& CurrentUp
 )
 {
 	if (PullingForce.IsNearlyZero())
@@ -45,16 +45,5 @@ FQuat RopeSolver::SolveRotation(
 	}
 
 	FVector TargetUp = -PullingForce.GetSafeNormal();
-
-	// Forward が TargetUp とほぼ平行だと MakeFromZX が縮退するのでフォールバック軸に切り替える
-	FVector Hint = Forward;
-	if (FVector::CrossProduct(TargetUp, Hint).IsNearlyZero())
-	{
-		Hint = FVector::CrossProduct(TargetUp, FVector::UpVector).IsNearlyZero()
-			? FVector::ForwardVector
-			: FVector::UpVector;
-	}
-
-	FMatrix RotMatrix = FRotationMatrix::MakeFromZX(TargetUp, Hint);
-	return RotMatrix.ToQuat();
+	return FQuat::FindBetweenNormals(CurrentUp, TargetUp);
 }

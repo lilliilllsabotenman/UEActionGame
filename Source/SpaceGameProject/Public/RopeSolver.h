@@ -15,11 +15,11 @@ public:
 		const FRopeSettings& Settings
 	);
 
-	// Leans "up" away from the pulling force, keeping Forward as the facing direction.
+	// Leans "up" away from the pulling force, expressed as a delta rotation from CurrentUp
+	// to the target up so it can be composed additively (e.g. via IRotationEventHub).
 	// Identity when PullingForce is (near) zero.
-	// Forward が縮退方向に近い場合はワールド軸にフォールバックする
 	static FQuat SolveRotation(
 		const FVector& PullingForce,
-		const FVector& Forward
+		const FVector& CurrentUp
 	);
 };

@@ -7,7 +7,6 @@
 #include "Camera/CameraComponent.h"
 #include "EnhancedInputComponent.h"
 #include "RopeSolver.h"
-#include "DrawDebugHelpers.h"
 #include "CableComponent.h"
 #include "Materials/MaterialInterface.h"
 
@@ -106,12 +105,8 @@ bool URopeSolverComponent::TryHook(FVector TraceDirection)
     FHitResult Hit;
     if (!GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, Params))
     {
-        DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red, false, 2.0f, 0, 1.0f);
         return false;
     }
-
-    DrawDebugLine(GetWorld(), TraceStart, Hit.ImpactPoint, FColor::Green, false, 2.0f, 0, 1.0f);
-    DrawDebugSphere(GetWorld(), Hit.ImpactPoint, 10.0f, 12, FColor::Green, false, 2.0f);
 
     TargetPosition = Hit.ImpactPoint;
 
@@ -188,7 +183,7 @@ void URopeSolverComponent::SetForce(bool pulling, float DeltaTime)
 
         SolvedLeanRotation = RopeSolver::SolveRotation(
             SolvedPlayerVelocity,
-            Owner->GetActorForwardVector()
+            Owner->GetActorUpVector()
         );
 
         SolvedTargetVelocity = FVector::ZeroVector;

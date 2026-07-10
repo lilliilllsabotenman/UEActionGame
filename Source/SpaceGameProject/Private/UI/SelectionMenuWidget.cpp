@@ -1,12 +1,12 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Fill out your copyright notice in the Description page of Project Settings.
 
-#include "UI/CLIMenuWidget.h"
+#include "UI/SelectionMenuWidget.h"
 #include "Components/TextBlock.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/PlayerController.h"
 
-void UCLIMenuWidget::NativeConstruct()
+void USelectionMenuWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
@@ -19,16 +19,16 @@ void UCLIMenuWidget::NativeConstruct()
 
 		if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(PC->InputComponent))
 		{
-			EnhancedInput->BindAction(MoveUpAction, ETriggerEvent::Started, this, &UCLIMenuWidget::HandleMoveUp);
-			EnhancedInput->BindAction(MoveDownAction, ETriggerEvent::Started, this, &UCLIMenuWidget::HandleMoveDown);
-			EnhancedInput->BindAction(ConfirmAction, ETriggerEvent::Started, this, &UCLIMenuWidget::HandleConfirm);
+			EnhancedInput->BindAction(MoveUpAction, ETriggerEvent::Started, this, &USelectionMenuWidget::HandleMoveUp);
+			EnhancedInput->BindAction(MoveDownAction, ETriggerEvent::Started, this, &USelectionMenuWidget::HandleMoveDown);
+			EnhancedInput->BindAction(ConfirmAction, ETriggerEvent::Started, this, &USelectionMenuWidget::HandleConfirm);
 		}
 	}
 
 	RefreshHighlight();
 }
 
-void UCLIMenuWidget::NativeDestruct()
+void USelectionMenuWidget::NativeDestruct()
 {
 	if (APlayerController* PC = GetOwningPlayer())
 	{
@@ -41,27 +41,32 @@ void UCLIMenuWidget::NativeDestruct()
 	Super::NativeDestruct();
 }
 
-void UCLIMenuWidget::HandleMoveUp(const FInputActionValue& Value)
+void USelectionMenuWidget::HandleMoveUp(const FInputActionValue& Value)
 {
 	SelectedIndex = FMath::Clamp(SelectedIndex - 1, 0, OptionLabels.Num() - 1);
 	RefreshHighlight();
 }
 
-void UCLIMenuWidget::HandleMoveDown(const FInputActionValue& Value)
+void USelectionMenuWidget::HandleMoveDown(const FInputActionValue& Value)
 {
 	SelectedIndex = FMath::Clamp(SelectedIndex + 1, 0, OptionLabels.Num() - 1);
 	RefreshHighlight();
 }
 
-void UCLIMenuWidget::HandleConfirm(const FInputActionValue& Value)
+void USelectionMenuWidget::HandleConfirm(const FInputActionValue& Value)
 {
+	if (!OptionKeys.IsValidIndex(SelectedIndex)) return;
+
 	OnSelectionConfirmed.Broadcast(OptionKeys[SelectedIndex]);
 }
 
-void UCLIMenuWidget::RefreshHighlight()
+void USelectionMenuWidget::RefreshHighlight()
 {
 	for (int32 Index = 0; Index < OptionLabels.Num(); ++Index)
 	{
-		OptionLabels[Index]->SetColorAndOpacity(Index == SelectedIndex ? HighlightColor : NormalColor);
+		if (UTextBlock* Label = OptionLabels[Index])
+		{
+			Label->SetColorAndOpacity(Index == SelectedIndex ? HighlightColor : NormalColor);
+		}
 	}
 }

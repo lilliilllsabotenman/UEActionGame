@@ -151,7 +151,7 @@ void UChangeGravityComponent::HandleCharacterHit(const FHitResult& Hit, const FV
     if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("NormalSpeed Over"));
 
     
-    if (!OwnerCharacter || OwnerCharacter->GetPlayerRopeState() == PlayerRopeState::Rope) return;
+    if (!OwnerCharacter || OwnerCharacter->GetPlayerRopeState() != PlayerRopeState::Rope) return;
     SetGravityDirection(-AverageNormal);
 }
 
