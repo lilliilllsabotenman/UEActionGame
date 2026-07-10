@@ -8,6 +8,7 @@
 
 class UInputMappingContext;
 class UUserWidget;
+class UCLIScreenWidget;
 
 /**
  *  Basic PlayerController class for a third person game
@@ -35,6 +36,14 @@ protected:
 	/** Pointer to the mobile controls widget */
 	UPROPERTY()
 	TObjectPtr<UUserWidget> MobileControlsWidget;
+
+	/** CLI-style title/selection screen widget to spawn */
+	UPROPERTY(EditAnywhere, Category="UI|CLI")
+	TSubclassOf<UCLIScreenWidget> CLIScreenWidgetClass;
+
+	/** Pointer to the spawned CLI screen widget */
+	UPROPERTY()
+	TObjectPtr<UCLIScreenWidget> CLIScreenWidget;
 
 	/** If true, the player will use UMG touch controls even if not playing on mobile platforms */
 	UPROPERTY(EditAnywhere, Config, Category = "Input|Touch Controls")
