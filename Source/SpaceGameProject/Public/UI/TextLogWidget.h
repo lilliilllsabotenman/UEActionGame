@@ -21,8 +21,8 @@ class SPACEGAMEPROJECT_API UTextLogWidget : public UUserWidget, public IAnimatio
 
 public:
 
+	UFUNCTION()
 	virtual void DoAnimation(const FOnAnimationFinished& OnFinished) override;
-
 	// Appends each line to the log, in order.
 	UFUNCTION(BlueprintCallable, Category = "TextLog")
 	void DisplayLines(const TArray<FString>& Lines);
