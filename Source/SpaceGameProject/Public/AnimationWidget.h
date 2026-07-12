@@ -8,7 +8,7 @@
 
 DECLARE_DYNAMIC_DELEGATE(FOnAnimationFinished);
 
-UINTERFACE(MinimalAPI)
+UINTERFACE(MinimalAPI, NotBlueprintable)
 class UAnimationWidget : public UInterface
 {
 	GENERATED_BODY()
@@ -21,5 +21,6 @@ class SPACEGAMEPROJECT_API IAnimationWidget
 	GENERATED_BODY()
 
 public:
+	UFUNCTION(BlueprintCallable, Category = "Animation")
 	virtual void DoAnimation(const FOnAnimationFinished& OnFinished) = 0;
 };
