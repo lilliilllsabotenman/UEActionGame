@@ -1,72 +1,132 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "UI/SelectionMenuWidget.h"
+#include "Blueprint/WidgetTree.h"
+#include "Components/CanvasPanel.h"
+#include "Components/CanvasPanelSlot.h"
+#include "Components/VerticalBox.h"
 #include "Components/TextBlock.h"
-#include "EnhancedInputComponent.h"
-#include "EnhancedInputSubsystems.h"
-#include "GameFramework/PlayerController.h"
+#include "TextFileParser.h"
+#include "LineDirectiveParser.h"
+#include "SpaceGameProject.h"
+#include "Kismet/GameplayStatics.h"
 
-void USelectionMenuWidget::NativeConstruct()
+TSharedRef<SWidget> USelectionMenuWidget::RebuildWidget()
 {
-	Super::NativeConstruct();
+	UCanvasPanel* Root = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass());
+	WidgetTree->RootWidget = Root;
 
-	if (APlayerController* PC = GetOwningPlayer())
+	LineContainer = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass());
+
+	if (UCanvasPanelSlot* CanvasSlot = Root->AddChildToCanvas(LineContainer))
 	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
-		{
-			Subsystem->AddMappingContext(MenuMappingContext, 0);
-		}
-
-		if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(PC->InputComponent))
-		{
-			EnhancedInput->BindAction(MoveUpAction, ETriggerEvent::Started, this, &USelectionMenuWidget::HandleMoveUp);
-			EnhancedInput->BindAction(MoveDownAction, ETriggerEvent::Started, this, &USelectionMenuWidget::HandleMoveDown);
-			EnhancedInput->BindAction(ConfirmAction, ETriggerEvent::Started, this, &USelectionMenuWidget::HandleConfirm);
-		}
+		CanvasSlot->SetAnchors(FAnchors(0.f, 0.f, 1.f, 1.f));
+		CanvasSlot->SetOffsets(FMargin(0.f));
 	}
 
+	ParseMenuFile();
+	BuildLineWidgets();
 	RefreshHighlight();
+
+	return Super::RebuildWidget();
 }
 
-void USelectionMenuWidget::NativeDestruct()
+void USelectionMenuWidget::ParseMenuFile()
 {
-	if (APlayerController* PC = GetOwningPlayer())
+	ParsedLines.Reset();
+	MaxItemIndex = INDEX_NONE;
+
+	for (const FString& RawLine : TextFileParser::ParseLines(MenuFilePath.FilePath))
 	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+		FSelectionMenuLine Line;
+
+		FLineDirective Directive;
+		FString Content;
+		if (!LineDirectiveParser::TryParse(RawLine, Directive, Content))
 		{
-			Subsystem->RemoveMappingContext(MenuMappingContext);
+			Line.Type = ESelectionMenuLineType::PlainText;
+			Line.Text = RawLine;
+			ParsedLines.Add(Line);
+			continue;
 		}
+
+		if (Directive.Marker == TEXT("ITEM") && Directive.ParamType == ELineDirectiveParamType::Int)
+		{
+			Line.Type = ESelectionMenuLineType::Item;
+			Line.Text = Content;
+			Line.ItemIndex = Directive.IntParam;
+			MaxItemIndex = FMath::Max(MaxItemIndex, Line.ItemIndex);
+		}
+		else
+		{
+			UE_LOG(LogSpaceGameProject, Error, TEXT("SelectionMenuWidget: unknown directive '%s' in line '%s'"), *Directive.Marker, *RawLine);
+			Line.Type = ESelectionMenuLineType::PlainText;
+			Line.Text = Content;
+		}
+
+		ParsedLines.Add(Line);
 	}
-
-	Super::NativeDestruct();
 }
 
-void USelectionMenuWidget::HandleMoveUp(const FInputActionValue& Value)
+void USelectionMenuWidget::BuildLineWidgets()
 {
-	SelectedIndex = FMath::Clamp(SelectedIndex - 1, 0, OptionLabels.Num() - 1);
-	RefreshHighlight();
-}
+	for (FSelectionMenuLine& Line : ParsedLines)
+	{
+		UTextBlock* TextBlock = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass());
 
-void USelectionMenuWidget::HandleMoveDown(const FInputActionValue& Value)
-{
-	SelectedIndex = FMath::Clamp(SelectedIndex + 1, 0, OptionLabels.Num() - 1);
-	RefreshHighlight();
-}
+		FSlateFontInfo FontInfo = TextBlock->GetFont();
+		FontInfo.Size = FontSize;
+		TextBlock->SetFont(FontInfo);
+		TextBlock->SetText(FText::FromString(Line.Text));
 
-void USelectionMenuWidget::HandleConfirm(const FInputActionValue& Value)
-{
-	if (!OptionKeys.IsValidIndex(SelectedIndex)) return;
+		LineContainer->AddChildToVerticalBox(TextBlock);
 
-	OnSelectionConfirmed.Broadcast(OptionKeys[SelectedIndex]);
+		Line.TextBlock = TextBlock;
+	}
 }
 
 void USelectionMenuWidget::RefreshHighlight()
 {
-	for (int32 Index = 0; Index < OptionLabels.Num(); ++Index)
+	for (const FSelectionMenuLine& Line : ParsedLines)
 	{
-		if (UTextBlock* Label = OptionLabels[Index])
-		{
-			Label->SetColorAndOpacity(Index == SelectedIndex ? HighlightColor : NormalColor);
-		}
+		if (Line.Type != ESelectionMenuLineType::Item || !Line.TextBlock) continue;
+
+		Line.TextBlock->SetColorAndOpacity(Line.ItemIndex == CurrentIndex ? HighlightColor : NormalColor);
 	}
+}
+
+void USelectionMenuWidget::NavigateUp()
+{
+	const int32 NewIndex = CurrentIndex - 1;
+	if (NewIndex < 0) return;
+
+	CurrentIndex = NewIndex;
+	RefreshHighlight();
+}
+
+void USelectionMenuWidget::NavigateDown()
+{
+	const int32 NewIndex = CurrentIndex + 1;
+	if (NewIndex > MaxItemIndex) return;
+
+	CurrentIndex = NewIndex;
+	RefreshHighlight();
+}
+
+void USelectionMenuWidget::Confirm()
+{
+	OnSelectionConfirmed.Broadcast(CurrentIndex);
+
+	const FSelectionLevelEntry* Entry = LevelsByIndex.FindByPredicate([this](const FSelectionLevelEntry& InEntry)
+	{
+		return InEntry.Index == CurrentIndex;
+	});
+
+	if (!Entry)
+	{
+		UE_LOG(LogSpaceGameProject, Error, TEXT("SelectionMenuWidget: no level mapped for Index %d"), CurrentIndex);
+		return;
+	}
+
+	UGameplayStatics::OpenLevel(this, FName(*Entry->LevelName));
 }
