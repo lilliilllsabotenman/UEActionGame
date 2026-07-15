@@ -1,8 +1,9 @@
-﻿#include "MyMovementComponent.h"
+#include "MyMovementComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/Pawn.h"
 #include "EnhancedInputComponent.h"
 #include "Engine/Engine.h"
+#include "RopeSolverComponent.h"
 
 void UMyMovementComponent::BeginPlay()
 {
@@ -11,6 +12,7 @@ void UMyMovementComponent::BeginPlay()
     if (AActor* Owner = GetOwner())
     {
         Camera = Owner->FindComponentByClass<UCameraComponent>();
+        RopeSolverComp = Owner->FindComponentByClass<URopeSolverComponent>();
 
         if (UActorComponent* HubComponent = Owner->FindComponentByInterface(URotationEventHub::StaticClass()))
         {
@@ -40,6 +42,12 @@ void UMyMovementComponent::TickComponent(
     FActorComponentTickFunction* ThisTickFunction
 )
 {
+    const bool bIsRoped = RopeSolverComp && RopeSolverComp->IsHooked();
+
+    // Rope中はRotationEventHub経由の自前回転(PlayerRotationSolver)に任せるため、
+    // CharacterMovementComponent標準の移動方向オートフェイスは切っておく。
+    bOrientRotationToMovement = !bIsRoped;
+
     Super::TickComponent(
         DeltaTime,
         TickType,
@@ -48,7 +56,10 @@ void UMyMovementComponent::TickComponent(
 
      GravityScale += (1 - GravityScale) / 20;
 
-     PlayerRotationSolver();
+     if (bIsRoped)
+     {
+         PlayerRotationSolver();
+     }
 }
 
 void UMyMovementComponent::PlayerRotationSolver()
@@ -96,10 +107,21 @@ FVector UMyMovementComponent::GetPlayerLocalVelocity() const
      const FVector2D MoveValue = Value.Get<FVector2D>();
 
      const APawn* Owner = GetPawnOwner();
-     if (!Owner) return;
+     if (!Owner || !Camera) return;
 
-     AddInputVector(Owner->GetActorForwardVector() * MoveValue.Y);
-     AddInputVector(Owner->GetActorRightVector() * MoveValue.X);
+     // 入力方向は常にカメラ基準(現在の重力Up軸に投影)。Actor自身の向きには依存しない。
+     const FVector Up = -GetGravityDirection().GetSafeNormal();
+
+     FVector Forward = FVector::VectorPlaneProject(Camera->GetForwardVector(), Up).GetSafeNormal();
+     if (Forward.IsNearlyZero())
+     {
+         Forward = FVector::VectorPlaneProject(Camera->GetUpVector(), Up).GetSafeNormal();
+     }
+
+     const FVector Right = FVector::CrossProduct(Up, Forward).GetSafeNormal();
+
+     AddInputVector(Forward * MoveValue.Y);
+     AddInputVector(Right * MoveValue.X);
  }
 
  void UMyMovementComponent::RequestJump()

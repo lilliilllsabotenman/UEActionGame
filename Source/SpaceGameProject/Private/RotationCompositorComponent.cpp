@@ -8,6 +8,9 @@
 URotationCompositorComponent::URotationCompositorComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
+
+	// Rope中のみ回転を握る設計。デフォルトは非アクティブ(地上はCharacterMovementComponent側に任せる)。
+	bAutoActivate = false;
 }
 
 
@@ -33,11 +36,24 @@ void URotationCompositorComponent::TickComponent(float DeltaTime, ELevelTick Tic
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	if (!IsActive()) return;
+
 	AppliedQuat = PlayerQuat; // Easing disabled for now; plain assignment.
 
 	if (AActor* Owner = GetOwner())
 	{
 		Owner->SetActorRotation(AppliedQuat);
+	}
+}
+
+void URotationCompositorComponent::Activate(bool bReset)
+{
+	Super::Activate(bReset);
+
+	if (AActor* Owner = GetOwner())
+	{
+		PlayerQuat = Owner->GetActorQuat();
+		AppliedQuat = PlayerQuat;
 	}
 }
 

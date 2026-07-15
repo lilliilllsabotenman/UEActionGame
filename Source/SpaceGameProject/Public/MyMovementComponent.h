@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -10,6 +10,7 @@
 class UCameraComponent;
 class UEnhancedInputComponent;
 class UInputAction;
+class URopeSolverComponent;
 
 UCLASS()
 class SPACEGAMEPROJECT_API
@@ -41,6 +42,9 @@ private :
 
     UPROPERTY()
     TScriptInterface<IRotationEventHub> RotationHub;
+
+    UPROPERTY()
+    URopeSolverComponent* RopeSolverComp = nullptr;
 
     void PlayerRotationSolver();
 

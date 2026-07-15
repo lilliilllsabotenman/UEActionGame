@@ -4,11 +4,9 @@ FVector RopeSolver::SolveForce(
 	const FVector& ControlledPosition,
 	const FVector& ControlledVelocity,
 	const FVector& HookPosition,
-	const FRopeSettings& Settings
-)
+	const FRopeSettings& Settings)
 {
 	FVector ToHook = HookPosition - ControlledPosition;
-
 	float Dist = ToHook.Size();
 
 	if (Dist <= KINDA_SMALL_NUMBER)
@@ -17,33 +15,44 @@ FVector RopeSolver::SolveForce(
 	}
 
 	FVector Dir = ToHook.GetSafeNormal();
-
-	FVector TotalForce = FVector::ZeroVector;
-
 	float Stretch = Dist - Settings.RopeLength;
 
-	if (Stretch > 0.f)
+	if (Stretch <= 0.f)
 	{
-		float VelAlong = FVector::DotProduct(ControlledVelocity, Dir);
-
-		float ForceMag = Stretch * Settings.SpringK - VelAlong * Settings.Damping;
-
-		TotalForce = Dir * ForceMag;
+		return FVector::ZeroVector;
 	}
 
-	return TotalForce;
+	float VelAlong = FVector::DotProduct(ControlledVelocity, Dir);
+	float ForceMag = Stretch * Settings.SpringK - VelAlong * Settings.Damping;
+
+	return Dir * ForceMag;
 }
 
-FQuat RopeSolver::SolveRotation(
-	const FVector& PullingForce,
-	const FVector& CurrentUp
-)
+FQuat RopeSolver::StepRotation(
+	const FQuat& CurrentRotation,
+	FVector& AngularVelocity,
+	const FVector& Force,
+	const FRopeSettings& Settings,
+	float DeltaTime)
 {
-	if (PullingForce.IsNearlyZero())
+	FVector AttachOffsetWorld = CurrentRotation.RotateVector(Settings.LocalAttachOffset);
+	FVector Torque = FVector::CrossProduct(AttachOffsetWorld, Force);
+
+	FVector AngularAccel = Torque / Settings.RotationalInertia - AngularVelocity * Settings.RotDamping;
+	AngularVelocity += AngularAccel * DeltaTime;
+
+	float StepAngle = AngularVelocity.Size() * DeltaTime;
+
+	if (StepAngle <= KINDA_SMALL_NUMBER)
 	{
-		return FQuat::Identity;
+		return CurrentRotation;
 	}
 
-	FVector TargetUp = -PullingForce.GetSafeNormal();
-	return FQuat::FindBetweenNormals(CurrentUp, TargetUp);
+	FVector StepAxis = AngularVelocity / AngularVelocity.Size();
+	FQuat DeltaRotation = FQuat(StepAxis, StepAngle);
+
+	FQuat NewRotation = DeltaRotation * CurrentRotation;
+	NewRotation.Normalize();
+
+	return NewRotation;
 }

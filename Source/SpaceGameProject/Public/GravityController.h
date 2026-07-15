@@ -18,4 +18,13 @@ public:
 
 	UFUNCTION(BlueprintPure)
 	static FRotator GetGravityWorldRotation(FRotator Rotation, FVector GravityDirection);
+
+	// 重力方向の変化をこの速さ(度/秒)で追従させる。カメラ基準の切り替えを滑らかにする。
+	UPROPERTY(EditDefaultsOnly, Category = "Gravity")
+	float GravityEaseSpeed = 180.f;
+
+private:
+
+	// UpdateRotationが実際に基準として使う、滑らかに追従した重力方向。
+	FVector SmoothedGravityDirection = FVector::DownVector;
 };

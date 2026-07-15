@@ -4,7 +4,7 @@
 
 #include "Kismet/GameplayStatics.h"
 #include "CoreMinimal.h"
-#include "GoalObject.h"
+#include "ItemParent.h"
 #include "Components/ActorComponent.h"
 #include "GameRuleComponent.generated.h"
 
@@ -17,7 +17,7 @@ class SPACEGAMEPROJECT_API UGameRuleComponent : public UActorComponent
 private:
 
 	UPROPERTY()
-	TArray<AGoalObject*> GoalObjects;
+	TArray<AItemParent*> ItemObjects;
 
 
 public:	
@@ -35,6 +35,6 @@ public:
 
 	bool MissonCompleted();
 
-	const TArray<AGoalObject*>& GetGoalObjects() const { return GoalObjects; }
+	const TArray<AItemParent*>& GetItemObjects() const { return ItemObjects; }
 };
 	

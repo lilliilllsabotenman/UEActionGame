@@ -5,13 +5,13 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "ItemObjectActor.h"
-#include "GoalObject.generated.h"
+#include "ItemParent.generated.h"
 
 UCLASS()
-class SPACEGAMEPROJECT_API AGoalObject : public AActor
+class SPACEGAMEPROJECT_API AItemParent : public AActor
 {
 	GENERATED_BODY()
-	
+
 private:
 
 	bool bIsCompleted = false;
@@ -27,9 +27,12 @@ private:
 	FVector GetRandomUpperHemisphereVector() const;
 	FVector FindValidSpawnLocation() const;
 
+	TArray<FVector> BurstSpawnPositions;
+	void PrecomputeBurstSpawnPositions();
+
 public:
 	// Sets default values for this actor's properties
-	AGoalObject();
+	AItemParent();
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	TSubclassOf<AItemObjectActor> ItemObjectClass;
@@ -49,6 +52,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	float LaunchConeHalfAngle = 20.f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	int32 BurstSpawnCount = 8;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	float BurstSpawnDistance = 300.f;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -59,4 +68,7 @@ public:
 
 	void Completed();
 	bool IsCompleted();
+
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	void TriggerItemBurst();
 };

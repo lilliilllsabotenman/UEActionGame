@@ -9,7 +9,7 @@
 #include "LocalOffsetSpringArmComponent.h"
 #include "RotationCompositorComponent.h"
 #include "GameRuleComponent.h"
-#include "GoalTrackerComponent.h"
+#include "ItemTrackerComponent.h"
 
 #include "MyMovementComponent.h"
 
@@ -21,14 +21,14 @@ class UCameraComponent;
 class USpringArmComponent;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnCharacterLanded, const FHitResult&);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerLocationUpdated, const FVector&);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnCharacterHit, const FHitResult&, const FVector&);
 
 enum class PlayerRopeState
 {
 	Rope,
 	Ground,
-	Fall
+	Fall,
+	ChangeGravity
 };
 
 UCLASS()
@@ -80,7 +80,7 @@ protected:
 	UGameRuleComponent* gameRule = nullptr;
 
 	UPROPERTY()
-	UGoalTrackerComponent* goalTrackerComponent = nullptr;
+	UItemTrackerComponent* itemTrackerComponent = nullptr;
 
 	UPROPERTY(EditAnywhere, Category = "Rope")
 	float GrappleTraceDistance = 10000.f;
@@ -93,9 +93,6 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent)
 	void onGoal();
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Tracking")
-	float PlayerLocationBroadcastInterval = 0.2f;
-
 public:
 
 	virtual void Tick(float DeltaTime) override;
@@ -106,7 +103,6 @@ public:
 	virtual void Landed(const FHitResult& Hit) override;
 
 	FOnCharacterLanded OnCharacterLanded;
-	FOnPlayerLocationUpdated OnPlayerLocationUpdated;
 	FOnCharacterHit OnCharacterHit;
 
 	void GetItem(UItemKey* Key);
@@ -114,26 +110,25 @@ public:
 	void Goal();
 
 	PlayerRopeState GetPlayerRopeState() const;
+	void SetPlayerRopeState(PlayerRopeState NewState);
 
 private:
 
 	bool bHasGoalItem=false;
 
-	FTimerHandle PlayerLocationBroadcastTimerHandle;
+	PlayerRopeState CurrentRopeState = PlayerRopeState::Ground;
 
 	UPROPERTY()
 	TArray<TScriptInterface<ICharacterComponent>> CharacterComponents;
 
 private:
 
-	void UseGravity();
-
-	void ChangeGravityStart();
-	void ChangeGravityEnd();
-
-	FVector GetLookActorLocation(float TraceDistance);
-	void PlayerGravitySolver();
-	void BroadcastPlayerLocation();
+	// 未使用(実装なし)。重力処理はUChangeGravityComponentに移行済み。
+	// void UseGravity();
+	// void ChangeGravityStart();
+	// void ChangeGravityEnd();
+	// FVector GetLookActorLocation(float TraceDistance);
+	// void PlayerGravitySolver();
 
 	UFUNCTION()
 	void OnCapsuleHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);

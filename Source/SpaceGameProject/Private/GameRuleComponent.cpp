@@ -23,14 +23,14 @@ void UGameRuleComponent::BeginPlay()
 
 	// ...
 	TArray<AActor*> FoundActors;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AGoalObject::StaticClass(), FoundActors);
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AItemParent::StaticClass(), FoundActors);
 
 	for (AActor* Actor : FoundActors)
 	{
-		AGoalObject* MyActor = Cast<AGoalObject>(Actor);
+		AItemParent* MyActor = Cast<AItemParent>(Actor);
 		if (MyActor != nullptr)
 		{
-			GoalObjects.Add(MyActor);
+			ItemObjects.Add(MyActor);
 		}
 	}
 	
@@ -47,7 +47,7 @@ void UGameRuleComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAc
 
 bool UGameRuleComponent::MissonCompleted()
 {
-	for (AGoalObject* Actor : GoalObjects)
+	for (AItemParent* Actor : ItemObjects)
 	{
 		const bool bCompleted = Actor->IsCompleted();
 		if (!bCompleted) return false;

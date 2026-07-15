@@ -3,7 +3,7 @@
 
 #include "ItemMovementComponent.h"
 #include "ItemObjectActor.h"
-#include "MyCharacter.h"
+#include "GameFramework/Character.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/EngineTypes.h"
@@ -22,28 +22,31 @@ void UItemMovementComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	EnsurePlayerCharacterBound();
+	EnsureLocationBroadcasterBound();
 }
 
-void UItemMovementComponent::EnsurePlayerCharacterBound()
+void UItemMovementComponent::EnsureLocationBroadcasterBound()
 {
-	if (BoundPlayerCharacter.IsValid()) return;
+	if (BoundLocationBroadcaster.IsValid()) return;
 
 	// Level-placed actors' BeginPlay order relative to the player pawn's possession isn't
 	// guaranteed, so GetPlayerCharacter can still return null here. Keep retrying from Tick
 	// until it succeeds instead of only trying once in BeginPlay.
-	if (AMyCharacter* PlayerCharacter = Cast<AMyCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0)))
+	if (ACharacter* PlayerCharacter = UGameplayStatics::GetPlayerCharacter(this, 0))
 	{
-		BoundPlayerCharacter = PlayerCharacter;
-		PlayerCharacter->OnPlayerLocationUpdated.AddUObject(this, &UItemMovementComponent::HandlePlayerLocationUpdated);
+		if (UPlayerLocationBroadcasterComponent* Broadcaster = PlayerCharacter->FindComponentByClass<UPlayerLocationBroadcasterComponent>())
+		{
+			BoundLocationBroadcaster = Broadcaster;
+			Broadcaster->OnPlayerLocationUpdated.AddUObject(this, &UItemMovementComponent::HandlePlayerLocationUpdated);
+		}
 	}
 }
 
 void UItemMovementComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (AMyCharacter* PlayerCharacter = BoundPlayerCharacter.Get())
+	if (UPlayerLocationBroadcasterComponent* Broadcaster = BoundLocationBroadcaster.Get())
 	{
-		PlayerCharacter->OnPlayerLocationUpdated.RemoveAll(this);
+		Broadcaster->OnPlayerLocationUpdated.RemoveAll(this);
 	}
 
 	Super::EndPlay(EndPlayReason);
@@ -65,7 +68,7 @@ void UItemMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	EnsurePlayerCharacterBound();
+	EnsureLocationBroadcasterBound();
 
 	AgeTimer += DeltaTime;
 
@@ -119,8 +122,13 @@ void UItemMovementComponent::ApplyPlayerAttraction(float DeltaTime)
 	AActor* Owner = GetOwner();
 	if (!Owner) return;
 
+	// 経過時間でVelocityへの上書き度合いを強め、最終的には慣性を無視してプレイヤー方向へ完全収束させる
+	const float RampAlpha = PlayerAttractionRampUpTime > KINDA_SMALL_NUMBER ? FMath::Clamp(AgeTimer / PlayerAttractionRampUpTime, 0.f, 1.f) : 1.f;
+	const float CurrentStrength = FMath::Lerp(PlayerAttractionStrength, MaxPlayerAttractionStrength, RampAlpha);
+
 	const FVector ToPlayer = LastKnownPlayerLocation - Owner->GetActorLocation();
-	Velocity += ToPlayer.GetSafeNormal() * PlayerAttractionStrength * DeltaTime;
+	const FVector TargetVelocity = ToPlayer.GetSafeNormal() * CurrentStrength;
+	Velocity = FMath::Lerp(Velocity, TargetVelocity, RampAlpha);
 }
 
 void UItemMovementComponent::ApplyMovement(float DeltaTime)
