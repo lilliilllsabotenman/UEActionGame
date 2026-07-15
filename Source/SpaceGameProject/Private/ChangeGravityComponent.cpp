@@ -3,7 +3,6 @@
 
 #include "ChangeGravityComponent.h"
 #include "MyCharacter.h"
-#include "Engine/Engine.h"
 
 // Sets default values for this component's properties
 UChangeGravityComponent::UChangeGravityComponent()
@@ -19,8 +18,6 @@ UChangeGravityComponent::UChangeGravityComponent()
 void UChangeGravityComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
-	MaxGravityResource = GravityResource;
 
 	OwnerCharacter = Cast<AMyCharacter>(GetOwner());
 	if (OwnerCharacter)
@@ -48,23 +45,9 @@ void UChangeGravityComponent::TickComponent(float DeltaTime, ELevelTick TickType
     }
 }
 
-void UChangeGravityComponent::AddResource()
-{
-    GravityResource = FMath::Min(GravityResource + CostBuffer, MaxGravityResource);
-}
-
-float UChangeGravityComponent::GetGravityResource() const
-{
-    return this->GravityResource;
-}
-
-
 void UChangeGravityComponent::SetGravityDirection(FVector newGravityDirection)
 {
     if (!MovementComponent) return;
-
-    if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green,
-        FString::Printf(TEXT("[Apply] SetGravityDirection newGravityDirection=%s"), *newGravityDirection.ToString()));
 
     const FTransform OwnerTransform = GetOwner()->GetActorTransform();
 
@@ -78,10 +61,13 @@ void UChangeGravityComponent::SetGravityDirection(FVector newGravityDirection)
     }
 
     MovementComponent->SetGravityDirection(newGravityDirection);
+
+    Cast<AMyCharacter>(GetOwner()) -> SetPlayerRopeState(PlayerRopeState::Ground);
 }
 
 void UChangeGravityComponent::PlayerGravitySolver()
 {
+    return;
     if (!MovementComponent) return;
     const float TraceDistance = 150.f;
     const float SampleOffset = 150.f;
@@ -140,18 +126,9 @@ void UChangeGravityComponent::HandleCharacterLanded(const FHitResult& Hit)
 
 void UChangeGravityComponent::HandleCharacterHit(const FHitResult& Hit, const FVector& Velocity)
 {
+    if (!OwnerCharacter || OwnerCharacter->GetPlayerRopeState() != PlayerRopeState::ChangeGravity) return;
+
     const FVector AverageNormal = GetAverageImpactNormal(Hit);
-    const float NormalSpeed = FVector::DotProduct(Velocity, -AverageNormal);
-
-    if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Orange,
-        FString::Printf(TEXT("[Receive] HandleCharacterHit Velocity=%s NormalSpeed=%.1f"), *Velocity.ToString(), NormalSpeed));
-
-    if (NormalSpeed < StrongImpactSpeedThreshold) return;
-
-    if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("NormalSpeed Over"));
-
-    
-    if (!OwnerCharacter || OwnerCharacter->GetPlayerRopeState() != PlayerRopeState::Rope) return;
     SetGravityDirection(-AverageNormal);
 }
 

@@ -1,11 +1,11 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "GoalObject.h"
+#include "ItemParent.h"
 #include "Engine/Engine.h"
 #include "MyCharacter.h"
 
 // Sets default values
-AGoalObject::AGoalObject()
+AItemParent::AItemParent()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -13,19 +13,46 @@ AGoalObject::AGoalObject()
 }
 
 // Called when the game starts or when spawned
-void AGoalObject::BeginPlay()
+void AItemParent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	OnActorBeginOverlap.AddDynamic(this, &AGoalObject::OnOverlapBegin);
+	OnActorBeginOverlap.AddDynamic(this, &AItemParent::OnOverlapBegin);
 
-	if (ItemObjectClass)
+	PrecomputeBurstSpawnPositions();
+
+}
+
+void AItemParent::PrecomputeBurstSpawnPositions()
+{
+	BurstSpawnPositions.Reset();
+	BurstSpawnPositions.Reserve(BurstSpawnCount);
+
+	for (int32 Index = 0; Index < BurstSpawnCount; ++Index)
 	{
-		GetWorldTimerManager().SetTimer(ItemSpawnTimerHandle, this, &AGoalObject::SpawnItemObject, ItemSpawnInterval, true);
+		BurstSpawnPositions.Add(GetActorLocation() + FMath::VRand() * BurstSpawnDistance);
 	}
 }
 
-void AGoalObject::SpawnItemObject()
+// Called every frame
+void AItemParent::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+}
+
+void AItemParent::TriggerItemBurst()
+{
+	if (bIsCompleted || !ItemObjectClass) return;
+
+	for (const FVector& SpawnLocation : BurstSpawnPositions)
+	{
+		GetWorld()->SpawnActor<AItemObjectActor>(ItemObjectClass, SpawnLocation, GetActorRotation());
+	}
+
+	this -> Destroy();
+}
+
+void AItemParent::SpawnItemObject()
 {
 	if(bIsCompleted) return;
 
@@ -38,7 +65,7 @@ void AGoalObject::SpawnItemObject()
 	SpawnedItem->LaunchWithVelocity(GetRandomUpperHemisphereVector() * Speed);
 }
 
-FVector AGoalObject::FindValidSpawnLocation() const
+FVector AItemParent::FindValidSpawnLocation() const
 {
 	const FVector Up = GetActorUpVector();
 	const int32 MaxAttempts = 10;
@@ -62,30 +89,24 @@ FVector AGoalObject::FindValidSpawnLocation() const
 	return GetActorLocation();
 }
 
-FVector AGoalObject::GetRandomUpperHemisphereVector() const
+FVector AItemParent::GetRandomUpperHemisphereVector() const
 {
 	const FVector Up = GetActorUpVector();
 	return FMath::VRandCone(Up, FMath::DegreesToRadians(LaunchConeHalfAngle));
 }
 
-// Called every frame
-void AGoalObject::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-}
-
-void AGoalObject::Completed()
+void AItemParent::Completed()
 {
 	bIsCompleted = true;
 	GetWorldTimerManager().ClearTimer(ItemSpawnTimerHandle);
 }
 
-bool AGoalObject::IsCompleted()
+bool AItemParent::IsCompleted()
 {
 	return bIsCompleted;
 }
 
-void AGoalObject::OnOverlapBegin(AActor* OverlappedActor, AActor* OtherActor)
+void AItemParent::OnOverlapBegin(AActor* OverlappedActor, AActor* OtherActor)
 {
 
 	AMyCharacter* Character = Cast<AMyCharacter>(OtherActor);

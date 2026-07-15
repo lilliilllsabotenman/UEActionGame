@@ -14,13 +14,19 @@ void AGravityController::UpdateRotation(float DeltaTime)
 		}
 	}
 
+	SmoothedGravityDirection = FMath::VInterpNormalRotationTo(
+		SmoothedGravityDirection,
+		GravityDirection,
+		DeltaTime,
+		GravityEaseSpeed);
+
 	FRotator ViewRotation = GetControlRotation();
 
 
 	ViewRotation =
 		GetGravityRelativeRotation(
 			ViewRotation,
-			GravityDirection);
+			SmoothedGravityDirection);
 
 	ViewRotation.Roll = 0;
 
@@ -35,7 +41,7 @@ void AGravityController::UpdateRotation(float DeltaTime)
 
 		ViewRotation.Roll = 0;
 
-		SetControlRotation(GetGravityWorldRotation(ViewRotation, GravityDirection));
+		SetControlRotation(GetGravityWorldRotation(ViewRotation, SmoothedGravityDirection));
 	}
 
 	APawn* const P = GetPawnOrSpectator();

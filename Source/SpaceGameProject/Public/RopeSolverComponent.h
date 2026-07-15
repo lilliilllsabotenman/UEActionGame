@@ -25,8 +25,6 @@ class SPACEGAMEPROJECT_API URopeSolverComponent : public UActorComponent, public
 
 private:
 
-
-
 	FVector TargetPosition = FVector::ZeroVector;
 	FVector TargetVelocity = FVector::ZeroVector;
 
@@ -35,8 +33,13 @@ private:
 
 	FQuat SolvedLeanRotation = FQuat::Identity;
 
+	// StepRotationが毎フレーム積分する角速度。フック/リリースでリセットする。
+	FVector AngularVelocity = FVector::ZeroVector;
+
 	bool bIsHooked = false;
 	bool bAncorIsMovement = false;
+
+	float MaxRopeResource = 0.f;
 
 	UPROPERTY()
 	UCameraComponent* Camera = nullptr;
@@ -54,6 +57,19 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rope")
 	bool bIsPulling = false;
+
+	UPROPERTY(EditAnywhere, Category = "Rope", meta = (ClampMin = "0.0"))
+	float FastMovementSpeedThreshold = 80.0f;
+
+//=======Resource============
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rope|Resource")
+	float RopeResource = 1.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rope|Resource")
+	float RopeCost = 0.001f;
+
+	float CostBuffer = RopeResource / 5.0f;
 
 //=======Cable Visual============
 
@@ -107,7 +123,14 @@ public:
 
 	bool IsHooked() const;
 
+	bool IsMovingFast() const;
+
 	FQuat GetLeanRotation() const;
+
+	UFUNCTION()
+	float GetRopeResource() const;
+
+	void AddResource();
 
 	virtual void OnActionTrigger() override;
 	virtual void BindInput(UEnhancedInputComponent* EnhancedInput) override;

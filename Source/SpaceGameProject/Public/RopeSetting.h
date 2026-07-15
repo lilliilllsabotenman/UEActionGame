@@ -38,4 +38,19 @@ struct SPACEGAMEPROJECT_API FRopeSettings
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grapple")
 	float SpringStrength = 50.f;
+
+	// 重心から見た、ロープが引っ張る位置のローカルオフセット。ここがゼロだと回転が一切発生しない。
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grapple")
+	FVector LocalAttachOffset = FVector(0.f, -20.f, 60.f);
+
+	// 回転のしやすさ(慣性)。大きいほど同じ力でもゆっくり回る。
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grapple", meta = (ClampMin = "0.001"))
+	float RotationalInertia = 400000.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grapple", meta = (ClampMin = "0.0"))
+	float RotDamping = 8.f;
+
+	// 射出アニメーションの見た目上の速度(cm/s)。当たり判定には影響しない。
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grapple", meta = (ClampMin = "0.0"))
+	float ShootSpeed = 4000.f;
 };

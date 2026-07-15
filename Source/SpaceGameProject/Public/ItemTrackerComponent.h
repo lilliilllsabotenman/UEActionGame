@@ -4,23 +4,37 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "GoalObject.h"
-#include "GoalTrackerComponent.generated.h"
+#include "ItemParent.h"
+#include "ItemTrackerComponent.generated.h"
 
 class UGameRuleComponent;
 class UUserWidget;
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class SPACEGAMEPROJECT_API UGoalTrackerComponent : public UActorComponent
+class SPACEGAMEPROJECT_API UItemTrackerComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this component's properties
-	UGoalTrackerComponent();
+	UItemTrackerComponent();
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GoalTracker")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ItemTracker")
 	TSubclassOf<UUserWidget> MarkerWidgetClass;
+
+	// この距離以下ではマーカーを最大サイズにする
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ItemTracker")
+	float MinDistance = 500.0f;
+
+	// この距離以上ではマーカーを最小サイズにする
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ItemTracker")
+	float MaxDistance = 5000.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ItemTracker")
+	float MinScale = 0.5f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ItemTracker")
+	float MaxScale = 1.5f;
 
 
 protected:
@@ -31,8 +45,8 @@ public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	UFUNCTION(BlueprintImplementableEvent, Category = "GoalTracker")
-	void OnGoalScreenPositionsUpdated();
+	UFUNCTION(BlueprintImplementableEvent, Category = "ItemTracker")
+	void OnItemScreenPositionsUpdated();
 
 private:
 
@@ -40,16 +54,16 @@ private:
 	UGameRuleComponent* GameRule = nullptr;
 
 	UPROPERTY()
-	TArray<AGoalObject*> GoalObjects;
+	TArray<AItemParent*> ItemObjects;
 
 	UPROPERTY()
-	TMap<AGoalObject*, FVector2D> GoalScreenPositions;
+	TMap<AItemParent*, FVector2D> ItemScreenPositions;
 
 	UPROPERTY()
-	TMap<AGoalObject*, UUserWidget*> GoalMarkerWidgets;
+	TMap<AItemParent*, UUserWidget*> ItemMarkerWidgets;
 
 	bool bMarkersCreated = false;
 
 	void CreateMarkerWidgets();
-	void UpdateGoalScreenPositions();
+	void UpdateItemScreenPositions();
 };

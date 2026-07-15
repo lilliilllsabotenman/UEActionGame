@@ -2,14 +2,15 @@
 
 #pragma once
 
+#include "PlayerLocationResponder.h"
+#include "PlayerLocationBroadcasterComponent.h"
+
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "ItemMovementComponent.generated.h"
 
-class AMyCharacter;
-
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class SPACEGAMEPROJECT_API UItemMovementComponent : public UActorComponent
+class SPACEGAMEPROJECT_API UItemMovementComponent : public UActorComponent, public IPlayerLocationResponder
 {
 	GENERATED_BODY()
 
@@ -35,6 +36,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerAttraction")
 	float PlayerAttractionStrength = 0.f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerAttraction")
+	float MaxPlayerAttractionStrength = 2000.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerAttraction")
+	float PlayerAttractionRampUpTime = 3.f;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Landing")
 	float SquishAmount = 0.4f;
 
@@ -46,6 +53,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	void SetVelocity(FVector NewVelocity);
+
+	virtual void HandlePlayerLocationUpdated(const FVector& NewLocation) override;
 
 protected:
 	// Called when the game starts
@@ -66,7 +75,7 @@ private:
 	FVector SquishAxis = FVector::UpVector;
 	FVector LastSquishMultiplier = FVector::OneVector;
 
-	TWeakObjectPtr<AMyCharacter> BoundPlayerCharacter;
+	TWeakObjectPtr<UPlayerLocationBroadcasterComponent> BoundLocationBroadcaster;
 	FVector LastKnownPlayerLocation = FVector::ZeroVector;
 	bool bHasPlayerLocation = false;
 
@@ -75,6 +84,6 @@ private:
 	void ApplyMovement(float DeltaTime);
 	void StartSquish(const FVector& ImpactNormal);
 	void UpdateSquish(float DeltaTime);
-	void HandlePlayerLocationUpdated(const FVector& NewLocation);
-	void EnsurePlayerCharacterBound();
+
+	void EnsureLocationBroadcasterBound();
 };

@@ -12,7 +12,6 @@
 #include "Engine/World.h"
 #include "Engine/Engine.h"
 #include "Components/CapsuleComponent.h"
-#include "RopeSolverComponent.h"
 
 AMyCharacter::AMyCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UMyMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -32,6 +31,7 @@ AMyCharacter::AMyCharacter(const FObjectInitializer& ObjectInitializer)
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationRoll = false;
 
+	// 初期値は地上仕様(true)。Rope中はUMyMovementComponent::TickComponentが毎ティックfalseに切り替える。
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 }
 
@@ -50,10 +50,8 @@ void AMyCharacter::BeginPlay()
 
 	GetCapsuleComponent()->OnComponentHit.AddDynamic(this, &AMyCharacter::OnCapsuleHit);
 
-	goalTrackerComponent = GetComponentByClass<UGoalTrackerComponent>();
+	itemTrackerComponent = GetComponentByClass<UItemTrackerComponent>();
 	gameRule = GetComponentByClass<UGameRuleComponent>();
-
-	GetWorldTimerManager().SetTimer(PlayerLocationBroadcastTimerHandle, this, &AMyCharacter::BroadcastPlayerLocation, PlayerLocationBroadcastInterval, true);
 }
 
 void AMyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -84,6 +82,12 @@ void AMyCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	// RopeとChangeGravityは外部から明示的にセットされる状態のため、Tickでは上書きしない。
+	if (CurrentRopeState != PlayerRopeState::Rope && CurrentRopeState != PlayerRopeState::ChangeGravity)
+	{
+		CurrentRopeState = GetCharacterMovement()->IsFalling() ? PlayerRopeState::Fall : PlayerRopeState::Ground;
+	}
+
 	for (TScriptInterface<ICharacterComponent>& Component : CharacterComponents)
 	{
 		Component->OnActionPassive();
@@ -94,6 +98,11 @@ void AMyCharacter::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
 
+	if (CurrentRopeState == PlayerRopeState::ChangeGravity)
+	{
+			(PlayerRopeState::Ground);
+	}
+
 	OnCharacterLanded.Broadcast(Hit);
 }
 
@@ -101,16 +110,7 @@ void AMyCharacter::OnCapsuleHit(UPrimitiveComponent* HitComponent, AActor* Other
 {
 	const FVector Velocity = GetCharacterMovement()->Velocity;
 
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Cyan,
-		FString::Printf(TEXT("[Broadcast] OnCharacterHit Velocity=%s ImpactNormal=%s"), *Velocity.ToString(), *Hit.ImpactNormal.ToString()));
-
 	OnCharacterHit.Broadcast(Hit, Velocity);
-}
-
-
-void AMyCharacter::BroadcastPlayerLocation()
-{
-	OnPlayerLocationUpdated.Broadcast(GetActorLocation());
 }
 
 //=====================================
@@ -134,14 +134,10 @@ void AMyCharacter::Goal()
 
 PlayerRopeState AMyCharacter::GetPlayerRopeState() const
 {
-	if (URopeSolverComponent* Rope = FindComponentByClass<URopeSolverComponent>())
-	{
-		if (Rope->IsHooked())
-		{
-			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Rope"));
-			return PlayerRopeState::Rope;
-		}
-	}
+	return CurrentRopeState;
+}
 
-	return GetCharacterMovement()->IsFalling() ? PlayerRopeState::Fall : PlayerRopeState::Ground;
+void AMyCharacter::SetPlayerRopeState(PlayerRopeState NewState)
+{
+	CurrentRopeState = NewState;
 }

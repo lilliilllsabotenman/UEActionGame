@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -24,18 +24,6 @@ public:
 
 	FOnChangeGravityEvent OnChangeGravityEvent;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GravityRule")
-	float GravityResource = 1.f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GravityRule")
-	float GravityCost = 0.001f;
-
-	float CostBuffer = GravityResource / 5.0f;
-
-private:
-
-	float MaxGravityResource = 0.f;
-
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -43,11 +31,6 @@ protected:
 public:	
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
-	UFUNCTION()
-	float GetGravityResource() const;
-
-	void AddResource();
 
 private:
 
@@ -68,15 +51,12 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Gravity", meta = (ClampMin = "0.0"))
 	float GravityConvergenceAngleThreshold = 1.0f;
 
-	// Impact speed along the hit normal required to treat the hit surface as new ground.
-	UPROPERTY(EditAnywhere, Category = "Gravity", meta = (ClampMin = "0.0"))
-	float StrongImpactSpeedThreshold = 800.0f;
-
 	// Half-angle of the cone used to sample surrounding surface normals around an impact point.
 	UPROPERTY(EditAnywhere, Category = "Gravity", meta = (ClampMin = "0.0", ClampMax = "89.0"))
 	float ImpactSampleAngle = 15.0f;
 
 	bool bIsConvergingGravity = false;
+	
 
 private:
 

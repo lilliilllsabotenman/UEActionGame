@@ -9,6 +9,8 @@
 #include "RopeSolver.h"
 #include "CableComponent.h"
 #include "Materials/MaterialInterface.h"
+#include "RotationCompositorComponent.h"
+#include "RotationEventHub.h"
 
 // Sets default values for this component's properties
 URopeSolverComponent::URopeSolverComponent()
@@ -21,6 +23,8 @@ URopeSolverComponent::URopeSolverComponent()
 void URopeSolverComponent::BeginPlay()
 {
     Super::BeginPlay();
+
+    MaxRopeResource = RopeResource;
 
     if (AActor* Owner = GetOwner())
     {
@@ -113,6 +117,17 @@ bool URopeSolverComponent::TryHook(FVector TraceDirection)
     Settings.RopeLength = FVector::Dist(TraceStart, Hit.ImpactPoint);
 
     bIsHooked = true;
+    AngularVelocity = FVector::ZeroVector;
+
+    if (AMyCharacter* OwnerCharacter = Cast<AMyCharacter>(Owner))
+    {
+        OwnerCharacter->SetPlayerRopeState(PlayerRopeState::Rope);
+    }
+
+    if (RotationCompositor)
+    {
+        RotationCompositor->Activate();
+    }
 
     if (CableVisual)
     {
@@ -139,9 +154,28 @@ void URopeSolverComponent::ReleaseHook()
     SolvedPlayerVelocity = FVector::ZeroVector;
     SolvedTargetVelocity = FVector::ZeroVector;
     SolvedLeanRotation = FQuat::Identity;
+    AngularVelocity = FVector::ZeroVector;
 
     bIsHooked = false;
     bAncorIsMovement = false;
+
+    if (AMyCharacter* OwnerCharacter = Cast<AMyCharacter>(GetOwner()))
+    {
+        if (IsMovingFast())
+        {
+            OwnerCharacter->SetPlayerRopeState(PlayerRopeState::ChangeGravity);
+        }
+        else
+        {
+            const bool bIsFalling = OwnerCharacter->GetCharacterMovement()->IsFalling();
+            OwnerCharacter->SetPlayerRopeState(bIsFalling ? PlayerRopeState::Fall : PlayerRopeState::Ground);
+        }
+    }
+
+    if (RotationCompositor)
+    {
+        RotationCompositor->Deactivate();
+    }
 
     if (CableVisual)
     {
@@ -172,19 +206,34 @@ void URopeSolverComponent::SetForce(bool pulling, float DeltaTime)
 
     if (!pulling)
     {
-        SolvedPlayerVelocity = RopeSolver::SolveForce(
+        const FVector Force = RopeSolver::SolveForce(
             CurrentPlayerPosition,
             CurrentPlayerVelocity,
             TargetPosition,
             Settings
         );
 
+        SolvedPlayerVelocity = Force;
         MoveComp->AddForce(SolvedPlayerVelocity);
 
-        SolvedLeanRotation = RopeSolver::SolveRotation(
-            SolvedPlayerVelocity,
-            Owner->GetActorUpVector()
-        );
+        RopeResource = FMath::Max(0.f, RopeResource - RopeCost * Force.Size() * DeltaTime * 0.01f);
+
+        const FQuat CurrentRotation = RotationCompositor ? RotationCompositor->GetQuat() : Owner->GetActorQuat();
+
+        // SolvedLeanRotation = RopeSolver::StepRotation(
+        //     CurrentRotation,
+        //     AngularVelocity,
+        //     Force,
+        //     Settings,
+        //     DeltaTime
+        // );
+
+        // if (RotationCompositor)
+        // {
+        //     // SolvedLeanRotationは絶対姿勢なので、Compositorの現在値からのDeltaに変換してAddQuatに渡す。
+        //     const FQuat Delta = IRotationEventHub::ConvertTargetToDelta(RotationCompositor->GetQuat(), SolvedLeanRotation);
+        //     RotationCompositor->AddQuat(Delta);
+        // }
 
         SolvedTargetVelocity = FVector::ZeroVector;
     }
@@ -197,7 +246,23 @@ bool URopeSolverComponent::IsHooked() const
     return bIsHooked;
 }
 
+bool URopeSolverComponent::IsMovingFast() const
+{
+    const AActor* Owner = GetOwner();
+    return Owner && Owner->GetVelocity().Size() >= FastMovementSpeedThreshold;
+}
+
 FQuat URopeSolverComponent::GetLeanRotation() const
 {
     return SolvedLeanRotation;
+}
+      
+float URopeSolverComponent::GetRopeResource() const
+{
+    return RopeResource;
+}
+
+void URopeSolverComponent::AddResource()
+{
+    RopeResource = FMath::Min(RopeResource + CostBuffer, MaxRopeResource);
 }
