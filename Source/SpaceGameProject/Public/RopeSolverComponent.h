@@ -17,6 +17,8 @@ class UEnhancedInputComponent;
 class URotationCompositorComponent;
 class UCableComponent;
 class UMaterialInterface;
+class UUserWidget;
+class UObjectTracker;
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class SPACEGAMEPROJECT_API URopeSolverComponent : public UActorComponent, public ICharacterComponent
@@ -49,6 +51,10 @@ private:
 
 	UPROPERTY()
 	UCableComponent* CableVisual = nullptr;
+
+	// Character経由で受け取る共有インスタンス(自分では生成しない)
+	UPROPERTY()
+	UObjectTracker* Tracker = nullptr;
 
 public:
 
@@ -93,6 +99,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rope|Visual")
 	UMaterialInterface* CableMaterial = nullptr;
 
+	// Hook地点に追従表示するレティクルのWidgetクラス
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rope|Visual")
+	TSubclassOf<UUserWidget> ReticleWidgetClass;
+
 //=======Input============
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
@@ -101,10 +111,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
 	UInputAction* Reel = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
-	UInputAction* Release = nullptr;
-	
-
+	// カメラ正面にHookGuideFinderと同じ判定でレイを飛ばし、フック可能な対象があるかどうかだけを見る(実際にはフックしない)
+	UFUNCTION(BlueprintPure)
+	bool IsCanHook();
 
 	ReleaseDelegate releaseDelegate;
 
@@ -112,6 +121,8 @@ public:
 	URopeSolverComponent();
 
 	void SetForce(bool pulling, float DeltaTime);
+
+	void HookAction();
 
 	// Traces from the owner in TraceDirection (up to Settings.RopeLength) and hooks onto the first hit.
 	// Returns false if nothing was hit.
@@ -132,7 +143,6 @@ public:
 
 	void AddResource();
 
-	virtual void OnActionTrigger() override;
 	virtual void BindInput(UEnhancedInputComponent* EnhancedInput) override;
 
 protected:

@@ -1,5 +1,6 @@
 ﻿#include "MyCharacter.h"
 
+#include "ObjectTracker.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 
@@ -33,6 +34,8 @@ AMyCharacter::AMyCharacter(const FObjectInitializer& ObjectInitializer)
 
 	// 初期値は地上仕様(true)。Rope中はUMyMovementComponent::TickComponentが毎ティックfalseに切り替える。
 	GetCharacterMovement()->bOrientRotationToMovement = true;
+
+	ObjectTracker = CreateDefaultSubobject<UObjectTracker>(TEXT("ObjectTracker"));
 }
 
 void AMyCharacter::BeginPlay()

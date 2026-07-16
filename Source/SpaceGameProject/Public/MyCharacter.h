@@ -19,6 +19,7 @@ class UInputMappingContext;
 class UInputAction;
 class UCameraComponent;
 class USpringArmComponent;
+class UObjectTracker;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnCharacterLanded, const FHitResult&);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnCharacterHit, const FHitResult&, const FVector&);
@@ -82,6 +83,10 @@ protected:
 	UPROPERTY()
 	UItemTrackerComponent* itemTrackerComponent = nullptr;
 
+	// 追跡対象のマーカー描画を担う汎用マネージャー。ItemTrackerComponentなど複数コンポーネントに配って使い回す
+	UPROPERTY()
+	UObjectTracker* ObjectTracker = nullptr;
+
 	UPROPERTY(EditAnywhere, Category = "Rope")
 	float GrappleTraceDistance = 10000.f;
 
@@ -111,6 +116,8 @@ public:
 
 	PlayerRopeState GetPlayerRopeState() const;
 	void SetPlayerRopeState(PlayerRopeState NewState);
+
+	UObjectTracker* GetObjectTracker() const { return ObjectTracker; }
 
 private:
 

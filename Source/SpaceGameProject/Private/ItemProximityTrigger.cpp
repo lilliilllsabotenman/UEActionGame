@@ -4,11 +4,9 @@
 #include "ItemProximityTrigger.h"
 #include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
-#include "Engine/Engine.h"
 
 void UItemProximityTrigger::HandlePlayerLocationUpdated(const FVector& NewLocation)
 {
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("!!!!!!"));
 	AActor* own = GetOwner();
 	AItemParent* itemParent = Cast<AItemParent>(own);
 
@@ -17,8 +15,6 @@ void UItemProximityTrigger::HandlePlayerLocationUpdated(const FVector& NewLocati
 	if(Distance > FVector::Dist(own -> GetActorLocation(), NewLocation))
 	{
 		itemParent -> TriggerItemBurst();
-
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("!!!!!!"));
 	}
 }
 

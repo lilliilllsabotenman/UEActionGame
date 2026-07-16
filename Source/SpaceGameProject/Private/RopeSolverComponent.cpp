@@ -4,7 +4,10 @@
 #include "RopeSolverComponent.h"
 
 #include "MyCharacter.h"
+#include "ObjectTracker.h"
+#include "HookGuideFinder.h"
 #include "Camera/CameraComponent.h"
+#include "Engine/Engine.h"
 #include "EnhancedInputComponent.h"
 #include "RopeSolver.h"
 #include "CableComponent.h"
@@ -31,6 +34,11 @@ void URopeSolverComponent::BeginPlay()
         Camera = Owner->FindComponentByClass<UCameraComponent>();
         RotationCompositor = Owner->FindComponentByClass<URotationCompositorComponent>();
 
+        if (AMyCharacter* OwnerCharacter = Cast<AMyCharacter>(Owner))
+        {
+            Tracker = OwnerCharacter->GetObjectTracker();
+        }
+
         CableVisual = NewObject<UCableComponent>(Owner, TEXT("RopeCableVisual"));
         if (CableVisual)
         {
@@ -50,6 +58,12 @@ void URopeSolverComponent::BeginPlay()
             CableVisual->RegisterComponent();
         }
     }
+
+    if (GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 5.f, Tracker ? FColor::Green : FColor::Red,
+            FString::Printf(TEXT("RopeSolverComponent::BeginPlay: Tracker = %s"), Tracker ? TEXT("valid") : TEXT("NULL")));
+    }
 }
 
 // Called every frame
@@ -60,6 +74,11 @@ void URopeSolverComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
     if (!bIsHooked) return;
 
     SetForce(bIsPulling, DeltaTime);
+
+    if (Tracker)
+    {
+        Tracker->UpdatePosition(this, TargetPosition, GetWorld());
+    }
 
     if (CableVisual)
     {
@@ -75,7 +94,7 @@ void URopeSolverComponent::BindInput(UEnhancedInputComponent* EnhancedInput)
 
     if (Hook)
     {
-        EnhancedInput->BindAction(Hook, ETriggerEvent::Started, this, &URopeSolverComponent::OnActionTrigger);
+        EnhancedInput->BindAction(Hook, ETriggerEvent::Started, this, &URopeSolverComponent::HookAction);
     }
 
     if(Reel)
@@ -89,10 +108,20 @@ void URopeSolverComponent::BindInput(UEnhancedInputComponent* EnhancedInput)
     }
 }
 
-void URopeSolverComponent::OnActionTrigger()
+void URopeSolverComponent::HookAction()
 {
     if (!Camera) return;
+
     TryHook(Camera->GetForwardVector());
+}
+
+bool URopeSolverComponent::IsCanHook()
+{
+    AActor* Owner = GetOwner();
+    if (!Owner || !Camera) return false;
+
+    FVector UnusedPosition;
+    return HookGuideFinder::FindHookTarget(GetWorld(), Owner->GetActorLocation(), Camera->GetForwardVector(), Owner, Settings, UnusedPosition);
 }
 
 bool URopeSolverComponent::TryHook(FVector TraceDirection)
@@ -101,20 +130,16 @@ bool URopeSolverComponent::TryHook(FVector TraceDirection)
     if (!Owner) return false;
 
     const FVector TraceStart = Owner->GetActorLocation();
-    const FVector TraceEnd = TraceStart + TraceDirection.GetSafeNormal() * Settings.MaxRopeLength;
 
-    FCollisionQueryParams Params;
-    Params.AddIgnoredActor(Owner);
-
-    FHitResult Hit;
-    if (!GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, Params))
+    FVector HitPosition;
+    if (!HookGuideFinder::FindHookTarget(GetWorld(), TraceStart, TraceDirection, Owner, Settings, HitPosition))
     {
         return false;
     }
 
-    TargetPosition = Hit.ImpactPoint;
+    TargetPosition = HitPosition;
 
-    Settings.RopeLength = FVector::Dist(TraceStart, Hit.ImpactPoint);
+    Settings.RopeLength = FVector::Dist(TraceStart, TargetPosition);
 
     bIsHooked = true;
     AngularVelocity = FVector::ZeroVector;
@@ -134,6 +159,11 @@ bool URopeSolverComponent::TryHook(FVector TraceDirection)
         CableVisual->CableLength = Settings.RopeLength;
         CableVisual->EndLocation = CableVisual->GetComponentTransform().InverseTransformPosition(TargetPosition);
         CableVisual->SetVisibility(true);
+    }
+
+    if (Tracker)
+    {
+        Tracker->RegisterTarget(this, ReticleWidgetClass, GetWorld());
     }
 
     return true;
@@ -180,6 +210,11 @@ void URopeSolverComponent::ReleaseHook()
     if (CableVisual)
     {
         CableVisual->SetVisibility(false);
+    }
+
+    if (Tracker)
+    {
+        Tracker->UnregisterTarget(this);
     }
 
     releaseDelegate.ExecuteIfBound();
