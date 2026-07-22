@@ -24,6 +24,12 @@ public class SpaceGameProject : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
 
+		// StageGeneratorのデブリメッシュ列挙用(エディタ専用)
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.Add("AssetRegistry");
+		}
+
 		PublicIncludePaths.AddRange(new string[] {
 			"SpaceGameProject",
 			"SpaceGameProject/Variant_Platforming",

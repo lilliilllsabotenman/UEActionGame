@@ -1,4 +1,4 @@
-﻿#include "MyCharacter.h"
+#include "MyCharacter.h"
 
 #include "ObjectTracker.h"
 #include "EnhancedInputComponent.h"
@@ -16,7 +16,7 @@
 
 AMyCharacter::AMyCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UMyMovementComponent>(ACharacter::CharacterMovementComponentName))
-{	
+{
 
 	SpringArm = CreateDefaultSubobject<ULocalOffsetSpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(RootComponent);
@@ -34,12 +34,15 @@ AMyCharacter::AMyCharacter(const FObjectInitializer& ObjectInitializer)
 
 	// 初期値は地上仕様(true)。Rope中はUMyMovementComponent::TickComponentが毎ティックfalseに切り替える。
 	GetCharacterMovement()->bOrientRotationToMovement = true;
-
-	ObjectTracker = CreateDefaultSubobject<UObjectTracker>(TEXT("ObjectTracker"));
 }
 
 void AMyCharacter::BeginPlay()
 {
+	// CreateDefaultSubobject(コンストラクタ+CDO経由)だと、Blueprintのコンパイル/ロード時に
+	// CDOのObjectTrackerがnullになる問題があったため、BeginPlayでNewObjectして生成する。
+	// ItemTrackerComponent等のBeginPlayはSuper::BeginPlay()の中で呼ばれるので、その前に生成必須。
+	ObjectTracker = NewObject<UObjectTracker>(this, TEXT("ObjectTracker"));
+
 	Super::BeginPlay();
 
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
@@ -103,7 +106,7 @@ void AMyCharacter::Landed(const FHitResult& Hit)
 
 	if (CurrentRopeState == PlayerRopeState::ChangeGravity)
 	{
-			(PlayerRopeState::Ground);
+		SetPlayerRopeState(PlayerRopeState::Ground);
 	}
 
 	OnCharacterLanded.Broadcast(Hit);
@@ -118,15 +121,20 @@ void AMyCharacter::OnCapsuleHit(UPrimitiveComponent* HitComponent, AActor* Other
 
 //=====================================
 
-void AMyCharacter::GetItem(UItemKey* Key)
+void AMyCharacter::GetItem()
 {
-	// GravityComponent->AddResource(); 
+	OnGetItem.Broadcast();
 }
 
 void AMyCharacter::Death()
 {
-
+	DeathPhysics();
 	onDeath();
+}
+
+void AMyCharacter::DeathPhysics()
+{
+	GetMesh()->SetSimulatePhysics(true);
 }
 
 void AMyCharacter::Goal()

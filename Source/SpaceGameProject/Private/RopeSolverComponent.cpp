@@ -7,7 +7,6 @@
 #include "ObjectTracker.h"
 #include "HookGuideFinder.h"
 #include "Camera/CameraComponent.h"
-#include "Engine/Engine.h"
 #include "EnhancedInputComponent.h"
 #include "RopeSolver.h"
 #include "CableComponent.h"
@@ -37,6 +36,7 @@ void URopeSolverComponent::BeginPlay()
         if (AMyCharacter* OwnerCharacter = Cast<AMyCharacter>(Owner))
         {
             Tracker = OwnerCharacter->GetObjectTracker();
+            OwnerCharacter->OnGetItem.AddUObject(this, &URopeSolverComponent::AddResource);
         }
 
         CableVisual = NewObject<UCableComponent>(Owner, TEXT("RopeCableVisual"));
@@ -57,12 +57,6 @@ void URopeSolverComponent::BeginPlay()
             CableVisual->SetVisibility(false);
             CableVisual->RegisterComponent();
         }
-    }
-
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 5.f, Tracker ? FColor::Green : FColor::Red,
-            FString::Printf(TEXT("RopeSolverComponent::BeginPlay: Tracker = %s"), Tracker ? TEXT("valid") : TEXT("NULL")));
     }
 }
 
@@ -126,6 +120,8 @@ bool URopeSolverComponent::IsCanHook()
 
 bool URopeSolverComponent::TryHook(FVector TraceDirection)
 {
+    if (RopeResource <= 0.f) return false;
+
     AActor* Owner = GetOwner();
     if (!Owner) return false;
 
@@ -252,6 +248,12 @@ void URopeSolverComponent::SetForce(bool pulling, float DeltaTime)
         MoveComp->AddForce(SolvedPlayerVelocity);
 
         RopeResource = FMath::Max(0.f, RopeResource - RopeCost * Force.Size() * DeltaTime * 0.01f);
+
+        if (RopeResource <= 0.f)
+        {
+            ReleaseHook();
+            return;
+        }
 
         const FQuat CurrentRotation = RotationCompositor ? RotationCompositor->GetQuat() : Owner->GetActorQuat();
 

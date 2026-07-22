@@ -126,10 +126,10 @@ void UChangeGravityComponent::HandleCharacterLanded(const FHitResult& Hit)
 
 void UChangeGravityComponent::HandleCharacterHit(const FHitResult& Hit, const FVector& Velocity)
 {
-    if (!OwnerCharacter || OwnerCharacter->GetPlayerRopeState() != PlayerRopeState::ChangeGravity) return;
+    // if (!OwnerCharacter || OwnerCharacter->GetPlayerRopeState() != PlayerRopeState::ChangeGravity) return;
 
-    const FVector AverageNormal = GetAverageImpactNormal(Hit);
-    SetGravityDirection(-AverageNormal);
+    // const FVector AverageNormal = GetAverageImpactNormal(Hit);
+    // SetGravityDirection(-AverageNormal);
 }
 
 FVector UChangeGravityComponent::GetAverageImpactNormal(const FHitResult& Hit)

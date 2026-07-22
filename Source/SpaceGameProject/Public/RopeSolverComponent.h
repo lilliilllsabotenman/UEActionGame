@@ -75,7 +75,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rope|Resource")
 	float RopeCost = 0.001f;
 
-	float CostBuffer = RopeResource / 5.0f;
+	float CostBuffer = RopeResource / 50.0f;
 
 //=======Cable Visual============
 

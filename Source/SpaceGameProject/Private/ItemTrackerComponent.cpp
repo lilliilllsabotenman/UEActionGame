@@ -4,7 +4,6 @@
 #include "ItemTrackerComponent.h"
 #include "GameRuleComponent.h"
 #include "MyCharacter.h"
-#include "Engine/Engine.h"
 
 // Sets default values for this component's properties
 UItemTrackerComponent::UItemTrackerComponent()
@@ -28,12 +27,6 @@ void UItemTrackerComponent::BeginPlay()
 		{
 			Tracker = OwnerCharacter->GetObjectTracker();
 		}
-	}
-
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, Tracker ? FColor::Green : FColor::Red,
-			FString::Printf(TEXT("ItemTrackerComponent::BeginPlay: Tracker = %s"), Tracker ? TEXT("valid") : TEXT("NULL")));
 	}
 }
 
