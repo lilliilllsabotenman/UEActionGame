@@ -20,9 +20,9 @@ public:
 	// フックが成功した位置を記録する。呼ぶたびに連番(Order)を1つ進める。
 	void LogHookAction(const FVector& Position);
 
+	// ログの出力先ファイルパスを返す(Saved/HookActionLog/HookActions.jsonl)。読み出し側(HookGuidePlacer等)とも共有する。
+	static FString GetLogFilePath();
+
 private:
 	int32 ActionOrder = 0;
-
-	// ログの出力先ファイルパスを返す(Saved/HookActionLog/HookActions.jsonl)
-	static FString GetLogFilePath();
 };

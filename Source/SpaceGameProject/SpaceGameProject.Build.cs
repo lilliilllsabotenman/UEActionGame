@@ -22,7 +22,7 @@ public class SpaceGameProject : ModuleRules
 			"CableComponent"
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] { });
+		PrivateDependencyModuleNames.AddRange(new string[] { "Json" });
 
 		// StageGeneratorのデブリメッシュ列挙用(エディタ専用)
 		if (Target.bBuildEditor)
