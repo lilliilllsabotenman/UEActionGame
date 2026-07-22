@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include "ItemKey.h"
 #include "Components/SphereComponent.h"
 #include "MyCharacter.h"
 
@@ -17,9 +16,6 @@ class SPACEGAMEPROJECT_API UItemObjectComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ItemKey")
-	UItemKey* Key;
 
 	UFUNCTION()
 	void OnOverlapBegin(

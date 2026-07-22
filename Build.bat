@@ -1,2 +1,2 @@
-call "C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Clean.bat" SpaceGameProjectEditor Win64 Development "C:\Users\niku\Documents\Unreal Projects\SpaceGameProject\SpaceGameProject.uproject" -waitmutex
-call "C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat" SpaceGameProjectEditor Win64 Development "C:\Users\niku\Documents\Unreal Projects\SpaceGameProject\SpaceGameProject.uproject" -waitmutex
+call "C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Clean.bat" SpaceGameProjectEditor Win64 Development "C:\Users\niku\Documents\UnrealProjects\SpaceGameProject\SpaceGameProject.uproject" -waitmutex
+call "C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat" SpaceGameProjectEditor Win64 Development "C:\Users\niku\Documents\UnrealProjects\SpaceGameProject\SpaceGameProject.uproject" -waitmutex

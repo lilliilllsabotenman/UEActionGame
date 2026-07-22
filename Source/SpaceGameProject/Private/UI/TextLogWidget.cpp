@@ -4,7 +4,7 @@
 #include "Blueprint/WidgetTree.h"
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
-#include "Components/VerticalBox.h"
+#include "Components/ScrollBox.h"
 #include "Components/TextBlock.h"
 #include "TextFileParser.h"
 #include "LineDirectiveParser.h"
@@ -15,7 +15,7 @@ TSharedRef<SWidget> UTextLogWidget::RebuildWidget()
 	UCanvasPanel* Root = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass());
 	WidgetTree->RootWidget = Root;
 
-	LineContainer = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass());
+	LineContainer = WidgetTree->ConstructWidget<UScrollBox>(UScrollBox::StaticClass());
 
 	if (UCanvasPanelSlot* CanvasSlot = Root->AddChildToCanvas(LineContainer))
 	{
@@ -125,7 +125,8 @@ void UTextLogWidget::RevealNextPendingLine()
 	Line->SetText(FText::FromString(Data.Text));
 	Line->SetColorAndOpacity(Data.Color);
 
-	LineContainer->AddChildToVerticalBox(Line);
+	LineContainer->AddChild(Line);
+	LineContainer->ScrollToEnd();
 
 	++NextPendingIndex;
 

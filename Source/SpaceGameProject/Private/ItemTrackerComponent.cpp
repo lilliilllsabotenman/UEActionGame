@@ -3,9 +3,7 @@
 
 #include "ItemTrackerComponent.h"
 #include "GameRuleComponent.h"
-#include "Kismet/GameplayStatics.h"
-#include "GameFramework/PlayerController.h"
-#include "Blueprint/UserWidget.h"
+#include "MyCharacter.h"
 
 // Sets default values for this component's properties
 UItemTrackerComponent::UItemTrackerComponent()
@@ -24,6 +22,11 @@ void UItemTrackerComponent::BeginPlay()
 	if (AActor* Owner = GetOwner())
 	{
 		GameRule = Owner->FindComponentByClass<UGameRuleComponent>();
+
+		if (AMyCharacter* OwnerCharacter = Cast<AMyCharacter>(Owner))
+		{
+			Tracker = OwnerCharacter->GetObjectTracker();
+		}
 	}
 }
 
@@ -50,61 +53,34 @@ void UItemTrackerComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 
 void UItemTrackerComponent::CreateMarkerWidgets()
 {
-	if (!MarkerWidgetClass) return;
-
-	APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-	if (!PC) return;
+	if (!Tracker) return;
 
 	for (AItemParent* Item : ItemObjects)
 	{
 		if (!Item) continue;
 
-		if (UUserWidget* Marker = CreateWidget<UUserWidget>(PC, MarkerWidgetClass))
-		{
-			Marker->AddToViewport();
-			ItemMarkerWidgets.Add(Item, Marker);
-		}
+		Tracker->RegisterTarget(Item, MarkerWidgetClass, GetWorld());
 	}
 }
 
 void UItemTrackerComponent::UpdateItemScreenPositions()
 {
-	APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-	if (!PC) return;
+	if (!Tracker) return;
 
-	for (auto It = ItemMarkerWidgets.CreateIterator(); It; ++It)
+	for (int32 Index = ItemObjects.Num() - 1; Index >= 0; --Index)
 	{
-		AItemParent* Item = It.Key();
-		UUserWidget* Marker = It.Value();
+		AItemParent* Item = ItemObjects[Index];
 
 		// 破棄されたItemはIsValidでしか検知できない(GCがポインタをnullにするのはこの後なので、生ポインタのnullチェックでは間に合わない)
-		if (!IsValid(Item) || !IsValid(Marker))
+		if (!IsValid(Item))
 		{
-			if (Marker)
-			{
-				Marker->RemoveFromParent();
-			}
-			ItemScreenPositions.Remove(Item);
-			It.RemoveCurrent();
+			Tracker->UnregisterTarget(Item);
+			ItemObjects.RemoveAt(Index);
 			continue;
 		}
 
-		FVector2D ScreenPosition;
-		if (UGameplayStatics::ProjectWorldToScreen(PC, Item->GetActorLocation(), ScreenPosition))
-		{
-			ItemScreenPositions.Add(Item, ScreenPosition);
-			Marker->SetPositionInViewport(ScreenPosition);
-			Marker->SetVisibility(ESlateVisibility::Visible);
-
-			// 距離が近いほど大きく、遠いほど小さく表示する
-			const float Distance = FVector::Dist(PC->PlayerCameraManager->GetCameraLocation(), Item->GetActorLocation());
-			const float Alpha = FMath::Clamp(FMath::GetRangePct(MinDistance, MaxDistance, Distance), 0.0f, 1.0f);
-			const float Scale = FMath::Lerp(MaxScale, MinScale, Alpha);
-			Marker->SetRenderScale(FVector2D(Scale, Scale));
-		}
-		else
-		{
-			Marker->SetVisibility(ESlateVisibility::Hidden);
-		}
+		const FVector Location = Item->GetActorLocation();
+		Tracker->UpdatePosition(Item, Location, GetWorld());
+		Tracker->ApplyDistanceScale(Item, Location, ScaleSettings, GetWorld());
 	}
 }

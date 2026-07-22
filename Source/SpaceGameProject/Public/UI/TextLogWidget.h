@@ -8,7 +8,7 @@
 #include "AnimationWidget.h"
 #include "TextLogWidget.generated.h"
 
-class UVerticalBox;
+class UScrollBox;
 class UTextBlock;
 
 // Fully-resolved display data for a single log line, as produced by UTextLogWidget::InterpretTextData.
@@ -75,7 +75,7 @@ protected:
 private:
 
 	UPROPERTY()
-	UVerticalBox* LineContainer = nullptr;
+	UScrollBox* LineContainer = nullptr;
 
 	TArray<FTextData> PendingLines;
 	int32 NextPendingIndex = 0;

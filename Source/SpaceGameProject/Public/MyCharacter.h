@@ -1,10 +1,9 @@
-﻿#pragma once
+#pragma once
 
 #include "CharacterComponent.h"
 #include "CoreMinimal.h"
 #include "UObject/ScriptInterface.h"
 #include "GameFramework/Character.h"
-#include "ItemKey.h"
 #include "ChangeGravityComponent.h"
 #include "LocalOffsetSpringArmComponent.h"
 #include "RotationCompositorComponent.h"
@@ -19,11 +18,15 @@ class UInputMappingContext;
 class UInputAction;
 class UCameraComponent;
 class USpringArmComponent;
+class UObjectTracker;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnCharacterLanded, const FHitResult&);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnCharacterHit, const FHitResult&, const FVector&);
+DECLARE_MULTICAST_DELEGATE(FOnGetItem);
 
-enum class PlayerRopeState
+
+UENUM(BlueprintType)
+enum class PlayerRopeState : uint8
 {
 	Rope,
 	Ground,
@@ -45,7 +48,7 @@ public:
 protected:
 
 	virtual void BeginPlay() override;
-	
+
 //=============Input==========
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
@@ -70,9 +73,6 @@ protected:
 
 	USkeletalMeshComponent* Mesh = GetMesh();
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ItemCategory")
-	UItemKey* DefaultItem = nullptr;
-
 	UPROPERTY()
 	UMyMovementComponent* MovementComponent = nullptr;
 
@@ -81,6 +81,12 @@ protected:
 
 	UPROPERTY()
 	UItemTrackerComponent* itemTrackerComponent = nullptr;
+
+	// 追跡対象のマーカー描画を担う汎用マネージャー。ItemTrackerComponentなど複数コンポーネントに配って使い回す
+	// CreateDefaultSubobjectだとBlueprintのコンパイル/ロード時にCDOのこの値がnullになる問題があったため、
+	// BeginPlayでNewObjectして生成する(コンストラクタでは生成しない)
+	UPROPERTY()
+	UObjectTracker* ObjectTracker = nullptr;
 
 	UPROPERTY(EditAnywhere, Category = "Rope")
 	float GrappleTraceDistance = 10000.f;
@@ -104,13 +110,21 @@ public:
 
 	FOnCharacterLanded OnCharacterLanded;
 	FOnCharacterHit OnCharacterHit;
+	FOnGetItem OnGetItem;
 
-	void GetItem(UItemKey* Key);
+	void GetItem();
 	void Death();
 	void Goal();
+	
+	// Death時のメッシュ物理シミュレーションON(いったん内部実装、BPのonDeathと併用)
+	void DeathPhysics();
 
+	UFUNCTION(BlueprintPure, Category = "Rope")
 	PlayerRopeState GetPlayerRopeState() const;
+
 	void SetPlayerRopeState(PlayerRopeState NewState);
+
+	UObjectTracker* GetObjectTracker() const { return ObjectTracker; }
 
 private:
 

@@ -53,4 +53,12 @@ struct SPACEGAMEPROJECT_API FRopeSettings
 	// 射出アニメーションの見た目上の速度(cm/s)。当たり判定には影響しない。
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grapple", meta = (ClampMin = "0.0"))
 	float ShootSpeed = 4000.f;
+
+	// フック照準アシスト: 正面レイの周りに散らすレイの円錐半角(度)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grapple|HookAssist", meta = (ClampMin = "0.0"))
+	float HookAssistSpreadAngle = 10.f;
+
+	// フック照準アシスト: 散らすレイの本数
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grapple|HookAssist", meta = (ClampMin = "0"))
+	int32 HookAssistRayCount = 8;
 };

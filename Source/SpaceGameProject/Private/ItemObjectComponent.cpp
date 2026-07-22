@@ -48,7 +48,7 @@ void UItemObjectComponent::OnOverlapBegin(
 	AMyCharacter* MyChar = Cast<AMyCharacter>(OtherActor);
 	if (!MyChar) return;
 
-	MyChar->GetItem(Key);
+	MyChar->GetItem();
 
 	GetOwner()->Destroy();
 }

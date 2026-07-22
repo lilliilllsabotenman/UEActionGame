@@ -5,10 +5,12 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "ItemParent.h"
+#include "ObjectTracker.h"
 #include "ItemTrackerComponent.generated.h"
 
 class UGameRuleComponent;
 class UUserWidget;
+class UObjectTracker;
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class SPACEGAMEPROJECT_API UItemTrackerComponent : public UActorComponent
@@ -22,20 +24,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ItemTracker")
 	TSubclassOf<UUserWidget> MarkerWidgetClass;
 
-	// この距離以下ではマーカーを最大サイズにする
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ItemTracker")
-	float MinDistance = 500.0f;
-
-	// この距離以上ではマーカーを最小サイズにする
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ItemTracker")
-	float MaxDistance = 5000.0f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ItemTracker")
-	float MinScale = 0.5f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ItemTracker")
-	float MaxScale = 1.5f;
-
+	FDistanceScaleSettings ScaleSettings;
 
 protected:
 	// Called when the game starts
@@ -53,14 +43,12 @@ private:
 	UPROPERTY()
 	UGameRuleComponent* GameRule = nullptr;
 
+	// Character側が所有するインスタンスを受け取って使う(自分では生成しない)
+	UPROPERTY()
+	UObjectTracker* Tracker = nullptr;
+
 	UPROPERTY()
 	TArray<AItemParent*> ItemObjects;
-
-	UPROPERTY()
-	TMap<AItemParent*, FVector2D> ItemScreenPositions;
-
-	UPROPERTY()
-	TMap<AItemParent*, UUserWidget*> ItemMarkerWidgets;
 
 	bool bMarkersCreated = false;
 
