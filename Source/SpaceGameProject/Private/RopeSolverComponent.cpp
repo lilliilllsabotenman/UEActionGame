@@ -13,6 +13,7 @@
 #include "Materials/MaterialInterface.h"
 #include "RotationCompositorComponent.h"
 #include "RotationEventHub.h"
+#include "HookActionLoggerComponent.h"
 
 // Sets default values for this component's properties
 URopeSolverComponent::URopeSolverComponent()
@@ -32,6 +33,7 @@ void URopeSolverComponent::BeginPlay()
     {
         Camera = Owner->FindComponentByClass<UCameraComponent>();
         RotationCompositor = Owner->FindComponentByClass<URotationCompositorComponent>();
+        HookLogger = Owner->FindComponentByClass<UHookActionLoggerComponent>();
 
         if (AMyCharacter* OwnerCharacter = Cast<AMyCharacter>(Owner))
         {
@@ -160,6 +162,11 @@ bool URopeSolverComponent::TryHook(FVector TraceDirection)
     if (Tracker)
     {
         Tracker->RegisterTarget(this, ReticleWidgetClass, GetWorld());
+    }
+
+    if (HookLogger)
+    {
+        HookLogger->LogHookAction(TargetPosition);
     }
 
     return true;

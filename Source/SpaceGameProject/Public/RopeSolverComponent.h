@@ -19,6 +19,7 @@ class UCableComponent;
 class UMaterialInterface;
 class UUserWidget;
 class UObjectTracker;
+class UHookActionLoggerComponent;
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class SPACEGAMEPROJECT_API URopeSolverComponent : public UActorComponent, public ICharacterComponent
@@ -55,6 +56,10 @@ private:
 	// Character経由で受け取る共有インスタンス(自分では生成しない)
 	UPROPERTY()
 	UObjectTracker* Tracker = nullptr;
+
+	// 同じOwnerにアタッチされていれば使う(開発効率化ツール、無くても動作する)
+	UPROPERTY()
+	UHookActionLoggerComponent* HookLogger = nullptr;
 
 public:
 
