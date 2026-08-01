@@ -4,6 +4,7 @@
 #include "EnhancedInputComponent.h"
 #include "Engine/Engine.h"
 #include "RopeSolverComponent.h"
+#include "MyCharacter.h"
 
 void UMyMovementComponent::BeginPlay()
 {
@@ -34,6 +35,19 @@ void UMyMovementComponent::BindInput(UEnhancedInputComponent* EnhancedInput)
     {
         EnhancedInput->BindAction(JumpAction, ETriggerEvent::Started, this, &UMyMovementComponent::RequestJump);
     }
+
+    if (DashShiftAction)
+    {
+        EnhancedInput->BindAction(DashShiftAction, ETriggerEvent::Started, this, &UMyMovementComponent::DashShift);
+        EnhancedInput->BindAction(DashShiftAction, ETriggerEvent::Completed, this, &UMyMovementComponent::_DashShift);
+    }
+
+    AActor* Owner = GetOwner();
+    
+    if(Owner)
+    {
+        StateObserver = Cast<IStateObserver>(Owner);
+    }
 }
 
 void UMyMovementComponent::TickComponent(
@@ -54,7 +68,13 @@ void UMyMovementComponent::TickComponent(
         ThisTickFunction
     );
 
-     GravityScale += (1 - GravityScale) / 20;
+     const AMyCharacter* OwnerCharacter = Cast<AMyCharacter>(GetOwner());
+     const bool bIsWeightless = OwnerCharacter && OwnerCharacter->IsWeightless();
+
+     if (!bIsWeightless)
+     {
+         GravityScale += (1 - GravityScale) / 20;
+     }
 
      if (bIsRoped)
      {
@@ -97,40 +117,61 @@ FVector UMyMovementComponent::GetPlayerLocalVelocity() const
     return Owner->GetActorTransform().InverseTransformVectorNoScale(Velocity);
 }
 
- FVector UMyMovementComponent::GetCurrentGravity() const
- {
-    return GetGravityDirection() * GetWorld()->GetGravityZ() * GravityScale;
- }
+FVector UMyMovementComponent::GetCurrentGravity() const
+{
+return GetGravityDirection() * GetWorld()->GetGravityZ() * GravityScale;
+}
 
- void UMyMovementComponent::Move(const FInputActionValue& Value)
- {
-     const FVector2D MoveValue = Value.Get<FVector2D>();
+void UMyMovementComponent::Move(const FInputActionValue& Value)
+{
+    const FVector2D MoveValue = Value.Get<FVector2D>();
 
-     const APawn* Owner = GetPawnOwner();
-     if (!Owner || !Camera) return;
+    const APawn* Owner = GetPawnOwner();
+    if (!Owner || !Camera) return;
 
-     // 入力方向は常にカメラ基準(現在の重力Up軸に投影)。Actor自身の向きには依存しない。
-     const FVector Up = -GetGravityDirection().GetSafeNormal();
+    // 入力方向は常にカメラ基準(現在の重力Up軸に投影)。Actor自身の向きには依存しない。
+    const FVector Up = -GetGravityDirection().GetSafeNormal();
 
-     FVector Forward = FVector::VectorPlaneProject(Camera->GetForwardVector(), Up).GetSafeNormal();
-     if (Forward.IsNearlyZero())
-     {
-         Forward = FVector::VectorPlaneProject(Camera->GetUpVector(), Up).GetSafeNormal();
-     }
+    FVector Forward = FVector::VectorPlaneProject(Camera->GetForwardVector(), Up).GetSafeNormal();
+    if (Forward.IsNearlyZero())
+    {
+        Forward = FVector::VectorPlaneProject(Camera->GetUpVector(), Up).GetSafeNormal();
+    }
 
-     const FVector Right = FVector::CrossProduct(Up, Forward).GetSafeNormal();
+    const FVector Right = FVector::CrossProduct(Up, Forward).GetSafeNormal();
 
-     AddInputVector(Forward * MoveValue.Y);
-     AddInputVector(Right * MoveValue.X);
- }
+    AddInputVector(Forward * MoveValue.Y);
+    AddInputVector(Right * MoveValue.X);
 
- void UMyMovementComponent::RequestJump()
- {
+    if(bIsDash)
+    {
+        Velocity += GetOwner()->GetActorRightVector() * (MoveValue.X * 100);
+        if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Dash"));
+    }
+}
 
-     SetMovementMode(MOVE_Falling);
+void UMyMovementComponent::RequestJump()
+{
 
-     if (const APawn* Owner = GetPawnOwner())
-     {
-         Velocity += Owner->GetActorUpVector() * JumpForce;
-     }
- }
+    SetMovementMode(MOVE_Falling);
+
+    if (const APawn* Owner = GetPawnOwner())
+    {
+        Velocity += Owner->GetActorUpVector() * JumpForce;
+    }
+}
+
+void UMyMovementComponent::DashShift()
+{
+    // if(StateObserver && StateObserver->GetRopeStateDelegate().Execute() == PlayerRopeState::Rope)
+    // {
+    //     bIsDash = true;
+    // }
+
+    bIsDash = true;
+}
+
+void UMyMovementComponent::_DashShift()
+{
+    bIsDash = false;
+}

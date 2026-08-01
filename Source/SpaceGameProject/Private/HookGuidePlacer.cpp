@@ -79,3 +79,9 @@ void AHookGuidePlacer::ClearGenerated()
 	}
 	GeneratedActors.Empty();
 }
+
+void AHookGuidePlacer::ClearLog()
+{
+	ClearGenerated();
+	UHookActionLoggerComponent::ClearLog();
+}

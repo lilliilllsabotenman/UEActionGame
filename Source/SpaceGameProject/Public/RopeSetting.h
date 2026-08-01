@@ -54,11 +54,8 @@ struct SPACEGAMEPROJECT_API FRopeSettings
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grapple", meta = (ClampMin = "0.0"))
 	float ShootSpeed = 4000.f;
 
-	// フック照準アシスト: 正面レイの周りに散らすレイの円錐半角(度)
+	// フック照準アシスト: 正面方向から候補を許容する円錐半角(度)。この角度以内のHookGuideのうち、
+	// 正面に一番近い角度のものにスナップする。
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grapple|HookAssist", meta = (ClampMin = "0.0"))
 	float HookAssistSpreadAngle = 10.f;
-
-	// フック照準アシスト: 散らすレイの本数
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grapple|HookAssist", meta = (ClampMin = "0"))
-	int32 HookAssistRayCount = 8;
 };

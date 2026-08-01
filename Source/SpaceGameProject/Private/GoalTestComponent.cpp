@@ -33,6 +33,4 @@ void UGoalTestComponent::OnGoalOverlap(
     {
         return;
     }
-
-    UE_LOG(LogTemp, Warning, TEXT("Goal"));
 }

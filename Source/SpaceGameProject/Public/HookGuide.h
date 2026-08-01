@@ -11,9 +11,13 @@ class SPACEGAMEPROJECT_API AHookGuide : public AActor
 {
 	GENERATED_BODY()
 	
-public:	
+public:
 	// Sets default values for this actor's properties
 	AHookGuide();
+
+	// SpawnActorの位置引数を反映させるためのルートコンポーネント
+	UPROPERTY(VisibleAnywhere, Category = "HookGuide")
+	TObjectPtr<USceneComponent> Root;
 
 protected:
 	// Called when the game starts or when spawned

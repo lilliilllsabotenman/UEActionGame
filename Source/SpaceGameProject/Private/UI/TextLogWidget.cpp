@@ -9,6 +9,7 @@
 #include "TextFileParser.h"
 #include "LineDirectiveParser.h"
 #include "SpaceGameProject.h"
+#include "Engine/Engine.h"
 
 TSharedRef<SWidget> UTextLogWidget::RebuildWidget()
 {
@@ -32,6 +33,12 @@ void UTextLogWidget::DoAnimation(const FOnAnimationFinished& OnFinished)
 
 	const TArray<FString> RawLines = TextFileParser::ParseLines(LogFilePath.FilePath);
 	DisplayLines(InterpretTextData(RawLines, DefaultTextData), LineInterval);
+}
+
+void UTextLogWidget::DisplayLinesFromFile(const FString& FilePath, float Interval)
+{
+	const TArray<FString> RawLines = TextFileParser::ParseLines(FilePath);
+	DisplayLines(InterpretTextData(RawLines, DefaultTextData), Interval);
 }
 
 TArray<FTextData> UTextLogWidget::InterpretTextData(const TArray<FString>& RawLines, const FTextData& DefaultTextData)
@@ -103,6 +110,48 @@ void UTextLogWidget::DisplayLines(const TArray<FTextData>& Lines, float Interval
 	if (!GetWorld()->GetTimerManager().IsTimerActive(LineRevealTimerHandle))
 	{
 		GetWorld()->GetTimerManager().SetTimer(LineRevealTimerHandle, this, &UTextLogWidget::RevealNextPendingLine, Interval, true);
+	}
+}
+
+void UTextLogWidget::RemoveOldestLine()
+{
+	if (!LineContainer || LineContainer->GetChildrenCount() == 0) return;
+
+	LineContainer->RemoveChildAt(0);
+	PendingLines.RemoveAt(0);
+	--NextPendingIndex;
+}
+
+void UTextLogWidget::RemoveTextLog(float Interval)
+{
+	if (Interval <= 0.f)
+	{
+		while (LineContainer && LineContainer->GetChildrenCount() > 0)
+		{
+			RemoveOldestLine();
+		}
+		return;
+	}
+
+	if (!GetWorld()->GetTimerManager().IsTimerActive(LineRemovalTimerHandle))
+	{
+		GetWorld()->GetTimerManager().SetTimer(LineRemovalTimerHandle, this, &UTextLogWidget::RemoveNextLineTick, Interval, true);
+	}
+}
+
+void UTextLogWidget::RemoveNextLineTick()
+{
+	if (!LineContainer || LineContainer->GetChildrenCount() == 0)
+	{
+		GetWorld()->GetTimerManager().ClearTimer(LineRemovalTimerHandle);
+		return;
+	}
+
+	RemoveOldestLine();
+
+	if (LineContainer->GetChildrenCount() == 0)
+	{
+		GetWorld()->GetTimerManager().ClearTimer(LineRemovalTimerHandle);
 	}
 }
 

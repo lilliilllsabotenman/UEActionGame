@@ -1,6 +1,5 @@
 #include "GravityController.h"
 #include "GameFramework/Character.h"
-#include "GameFramework/CharacterMovementComponent.h"
 
 void AGravityController::UpdateRotation(float DeltaTime)
 {
@@ -8,10 +7,7 @@ void AGravityController::UpdateRotation(float DeltaTime)
 
 	if (ACharacter* PlayerCharacter = Cast<ACharacter>(GetPawn()))
 	{
-		if (UCharacterMovementComponent* MoveComp = PlayerCharacter->GetCharacterMovement())
-		{
-			GravityDirection = MoveComp->GetGravityDirection();
-		}
+		GravityDirection = -PlayerCharacter->GetActorUpVector();
 	}
 
 	SmoothedGravityDirection = FMath::VInterpNormalRotationTo(

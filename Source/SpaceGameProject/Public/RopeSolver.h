@@ -13,10 +13,10 @@ public:
 		const FVector& HookPosition,
 		const FRopeSettings& Settings);
 
-	static FQuat StepRotation(
-		const FQuat& CurrentRotation,
-		FVector& AngularVelocity,
-		const FVector& Force,
-		const FRopeSettings& Settings,
-		float DeltaTime);
+	// 遠心力から目標バンク方向を求め、CurrentUp→TargetUpへの変化量(世界空間delta)を
+	// FQuatとして直接返す。stateless。AddQuatにそのまま渡せる。
+	static FVector SolveDirection(
+		FVector CurrentUpDirection,
+		FVector TargetDirection,
+		FVector SolveSpeed);
 };

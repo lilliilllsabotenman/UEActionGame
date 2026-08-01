@@ -23,6 +23,9 @@ public:
 	// ログの出力先ファイルパスを返す(Saved/HookActionLog/HookActions.jsonl)。読み出し側(HookGuidePlacer等)とも共有する。
 	static FString GetLogFilePath();
 
+	// 蓄積したログファイルを削除する。HookGuidePlacer等から任意のタイミングで呼び出す想定。
+	static void ClearLog();
+
 private:
 	int32 ActionOrder = 0;
 };

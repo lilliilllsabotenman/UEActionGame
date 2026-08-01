@@ -12,7 +12,7 @@ UGenericObjectTrackerComponent::UGenericObjectTrackerComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 }
 
-AActor* UGenericObjectTrackerComponent::ResolveTargetActor() const
+AActor* UGenericObjectTrackerComponent::ResolveTargetActor(const UTrackerKey* TargetKey) const
 {
 	if (!TargetKey) return nullptr;
 
@@ -42,15 +42,23 @@ void UGenericObjectTrackerComponent::BeginPlay()
 		Tracker = OwnerCharacter->GetObjectTracker();
 	}
 
-	TargetActor = ResolveTargetActor();
-	if (!TargetActor)
+	TargetActors.SetNum(TrackTargets.Num());
+	for (int32 Index = 0; Index < TrackTargets.Num(); ++Index)
 	{
-		UE_LOG(LogSpaceGameProject, Error, TEXT("GenericObjectTrackerComponent: no TrackableComponent found matching TargetKey"));
-	}
+		const FObjectTrackerEntry& Entry = TrackTargets[Index];
+		AActor* TargetActor = ResolveTargetActor(Entry.TargetKey);
+		TargetActors[Index] = TargetActor;
 
-	if (Tracker && TargetActor)
-	{
-		Tracker->RegisterTarget(TargetActor, MarkerWidgetClass, GetWorld());
+		if (!TargetActor)
+		{
+			UE_LOG(LogSpaceGameProject, Error, TEXT("GenericObjectTrackerComponent: no TrackableComponent found matching TargetKey"));
+			continue;
+		}
+
+		if (Tracker)
+		{
+			Tracker->RegisterTarget(TargetActor, Entry.MarkerWidgetClass, GetWorld());
+		}
 	}
 }
 
@@ -58,16 +66,23 @@ void UGenericObjectTrackerComponent::TickComponent(float DeltaTime, ELevelTick T
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (!Tracker || !TargetActor) return;
+	if (!Tracker) return;
 
-	// 破棄されたActorはIsValidでしか検知できない(GCがポインタをnullにするのはこの後なので、生ポインタのnullチェックでは間に合わない)
-	if (!IsValid(TargetActor))
+	for (int32 Index = 0; Index < TargetActors.Num(); ++Index)
 	{
-		Tracker->UnregisterTarget(TargetActor);
-		return;
-	}
+		AActor* TargetActor = TargetActors[Index];
+		if (!TargetActor) continue;
 
-	const FVector Location = TargetActor->GetActorLocation();
-	Tracker->UpdatePosition(TargetActor, Location, GetWorld());
-	Tracker->ApplyDistanceScale(TargetActor, Location, ScaleSettings, GetWorld());
+		// 破棄されたActorはIsValidでしか検知できない(GCがポインタをnullにするのはこの後なので、生ポインタのnullチェックでは間に合わない)
+		if (!IsValid(TargetActor))
+		{
+			Tracker->UnregisterTarget(TargetActor);
+			TargetActors[Index] = nullptr;
+			continue;
+		}
+
+		const FVector Location = TargetActor->GetActorLocation();
+		Tracker->UpdatePosition(TargetActor, Location, GetWorld());
+		Tracker->ApplyDistanceScale(TargetActor, Location, TrackTargets[Index].ScaleSettings, GetWorld());
+	}
 }

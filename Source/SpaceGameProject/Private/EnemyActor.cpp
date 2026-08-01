@@ -33,7 +33,7 @@ void AEnemyActor::Tick(float DeltaTime)
 
 void AEnemyActor::OnOverlapBegin(
 	UPrimitiveComponent* OverlappedComp,
-	AActor* OtherActor,
+	AActor* OtherActor,	
 	UPrimitiveComponent* OtherComp,
 	int32 OtherBodyIndex,
 	bool bFromSweep,

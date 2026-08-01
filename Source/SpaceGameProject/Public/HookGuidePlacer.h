@@ -31,4 +31,8 @@ public:
 
 	UFUNCTION(CallInEditor, Category = "HookGuidePlacement")
 	void ClearGenerated();
+
+	// 蓄積したHookActions.jsonlを削除する(ゴミログが溜まったときに任意のタイミングで実行する)
+	UFUNCTION(CallInEditor, Category = "HookGuidePlacement")
+	void ClearLog();
 };

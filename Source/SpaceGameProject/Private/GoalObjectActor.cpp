@@ -3,6 +3,7 @@
 
 #include "GoalObjectActor.h"
 #include "MyCharacter.h"
+#include "Engine/Engine.h"
 
 // Sets default values
 AGoalObjectActor::AGoalObjectActor()
@@ -41,7 +42,6 @@ void AGoalObjectActor::OnOverlapBegin(
 {
 	if (AMyCharacter* Player = Cast<AMyCharacter>(OtherActor))
 	{
-
 		Player->Goal();
 	}
 }

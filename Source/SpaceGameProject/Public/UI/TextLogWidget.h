@@ -46,6 +46,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "TextLog")
 	void DisplayLines(const TArray<FTextData>& Lines, float Interval);
 
+	// ファイルパスを渡すだけで読み込み・解釈・表示までまとめて行う(BP向けの簡易版)。
+	UFUNCTION(BlueprintCallable, Category = "TextLog")
+	void DisplayLinesFromFile(const FString& FilePath, float Interval);
+
+	// 表示中の最も古い行を1行削除する。残りの行はScrollBoxの詰め直しにより自動で繰り上がる。
+	UFUNCTION(BlueprintCallable, Category = "TextLog")
+	void RemoveOldestLine();
+
+	// 表示中の行を先頭から順に全部消す。Intervalは1行消すごとの間隔(秒)で、0なら即座に全部消す。
+	UFUNCTION(BlueprintCallable, Category = "TextLog")
+	void RemoveTextLog(float Interval);
+
 	// Interprets raw file lines into ready-to-render FTextData. A line with no directive gets
 	// DefaultTextData's Color/FontSize as-is. A "[COLOR:R,G,B]" or "[SIZE:N]" directive overrides
 	// just that one field for its line; any other/malformed directive is logged and the line
@@ -80,7 +92,9 @@ private:
 	TArray<FTextData> PendingLines;
 	int32 NextPendingIndex = 0;
 	FTimerHandle LineRevealTimerHandle;
+	FTimerHandle LineRemovalTimerHandle;
 	FOnAnimationFinished PendingFinishedCallback;
 
 	void RevealNextPendingLine();
+	void RemoveNextLineTick();
 };

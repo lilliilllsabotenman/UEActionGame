@@ -3,19 +3,7 @@
 #include "HookGuideFinder.h"
 #include "HookGuide.h"
 #include "Engine/World.h"
-
-FVector HookGuideFinder::ComputeConeRayDirection(const FVector& Forward, float ConeAngleDegrees, float AzimuthDegrees)
-{
-	const FRotationMatrix Basis(Forward.Rotation());
-	const FVector Right = Basis.GetScaledAxis(EAxis::Y);
-	const FVector Up = Basis.GetScaledAxis(EAxis::Z);
-
-	const float ConeAngleRad = FMath::DegreesToRadians(ConeAngleDegrees);
-	const float AzimuthRad = FMath::DegreesToRadians(AzimuthDegrees);
-
-	const FVector OffsetDirection = Right * FMath::Cos(AzimuthRad) + Up * FMath::Sin(AzimuthRad);
-	return (Forward * FMath::Cos(ConeAngleRad) + OffsetDirection * FMath::Sin(ConeAngleRad)).GetSafeNormal();
-}
+#include "Kismet/GameplayStatics.h"
 
 bool HookGuideFinder::FindHookTarget(
 	UWorld* World,
@@ -46,22 +34,45 @@ bool HookGuideFinder::FindHookTarget(
 		return true;
 	}
 
-	// 正面が外れていても、周囲にHookGuideがあれば優先的にスナップする
-	for (int32 Index = 0; Index < Settings.HookAssistRayCount; ++Index)
-	{
-		const float AzimuthDegrees = 360.f * Index / FMath::Max(Settings.HookAssistRayCount, 1);
-		const FVector RayDirection = ComputeConeRayDirection(Forward, Settings.HookAssistSpreadAngle, AzimuthDegrees);
+	// 正面が外れていても、円錐角内かつ視線の通るHookGuideのうち正面に一番近いものにスナップする。
+	// ただしあくまでアシストなので、正面レイが手前の何かに当たっている場合はその距離より遠いGuideには割り込ませない。
+	TArray<AActor*> AllGuides;
+	UGameplayStatics::GetAllActorsOfClass(World, AHookGuide::StaticClass(), AllGuides);
 
-		FHitResult ScatterHit;
-		if (World->LineTraceSingleByChannel(
-			ScatterHit, RayOrigin, RayOrigin + RayDirection * Settings.MaxRopeLength, ECC_Visibility, Params))
-		{
-			if (AHookGuide* HookGuide = Cast<AHookGuide>(ScatterHit.GetActor()))
-			{
-				OutTargetPosition = HookGuide->GetActorLocation();
-				return true;
-			}
-		}
+	const float MaxAngleRad = FMath::DegreesToRadians(Settings.HookAssistSpreadAngle);
+	const float MaxCandidateDistance = bForwardHit
+		? FVector::Dist(RayOrigin, ForwardHit.ImpactPoint)
+		: Settings.MaxRopeLength;
+
+	AActor* BestGuide = nullptr;
+	float BestAngleRad = MaxAngleRad;
+
+	for (AActor* GuideActor : AllGuides)
+	{
+		if (!GuideActor || GuideActor == IgnoreActor) continue;
+
+		const FVector ToGuide = GuideActor->GetActorLocation() - RayOrigin;
+		const float Distance = ToGuide.Size();
+		if (Distance < KINDA_SMALL_NUMBER || Distance > MaxCandidateDistance) continue;
+
+		const FVector Direction = ToGuide / Distance;
+		const float AngleRad = FMath::Acos(FMath::Clamp(FVector::DotProduct(Forward, Direction), -1.f, 1.f));
+		if (AngleRad > BestAngleRad) continue;
+
+		// 障害物に遮られていないか確認する(対象自身に当たった場合はOK)
+		FHitResult VisibilityHit;
+		const bool bBlocked = World->LineTraceSingleByChannel(
+			VisibilityHit, RayOrigin, GuideActor->GetActorLocation(), ECC_Visibility, Params);
+		if (bBlocked && VisibilityHit.GetActor() != GuideActor) continue;
+
+		BestGuide = GuideActor;
+		BestAngleRad = AngleRad;
+	}
+
+	if (BestGuide)
+	{
+		OutTargetPosition = BestGuide->GetActorLocation();
+		return true;
 	}
 
 	// HookGuideは見つからなかった。正面レイの素のヒット点にフォールバック

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "StateObserver.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "CharacterComponent.h"
 #include "InputActionValue.h"
@@ -25,6 +26,10 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
 	UInputAction* JumpAction=nullptr;
+	
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
+	UInputAction* DashShiftAction=nullptr;
+
 
     UFUNCTION(BlueprintPure, Category = "Movement")
     FVector GetPlayerLocalVelocity() const;
@@ -33,6 +38,10 @@ public:
     float JumpForce = 600.f;
 
 private :
+
+    bool bIsDash = false;
+
+    IStateObserver* StateObserver = nullptr;
 
     FVector CharacterDirection = FVector::DownVector;
 
@@ -58,7 +67,11 @@ public:
 
     FVector GetCurrentGravity() const;
 
+private:
+
     void Move(const FInputActionValue& Value);
     void RequestJump();
+    void DashShift();
+    void _DashShift();
 };
 

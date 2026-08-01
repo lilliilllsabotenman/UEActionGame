@@ -6,13 +6,12 @@
 #include "GameFramework/PlayerController.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Blueprint/UserWidget.h"
-#include "Engine/Engine.h"
+#include "Blueprint/GameViewportSubsystem.h"
 
 void UObjectTracker::RegisterTarget(UObject* Key, TSubclassOf<UUserWidget> MarkerWidgetClass, UWorld* World)
 {
 	if (!Key || !MarkerWidgetClass)
 	{
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("ObjectTracker::RegisterTarget: Key or MarkerWidgetClass is null"));
 		return;
 	}
 	if (MarkerWidgets.Contains(Key)) return;
@@ -20,19 +19,23 @@ void UObjectTracker::RegisterTarget(UObject* Key, TSubclassOf<UUserWidget> Marke
 	APlayerController* PC = UGameplayStatics::GetPlayerController(World, 0);
 	if (!PC)
 	{
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("ObjectTracker::RegisterTarget: PlayerController is null"));
 		return;
 	}
 
 	if (UUserWidget* Marker = CreateWidget<UUserWidget>(PC, MarkerWidgetClass))
 	{
 		Marker->AddToViewport();
+
+		// SetPositionInViewportは左上基準、SetRenderScaleは中心基準でズレるため、位置基準もWidget中心に揃える
+		// (UE5.7ではAddToViewportはUGameViewportSubsystem管理になっており、UCanvasPanelSlotへはキャストできない)
+		if (UGameViewportSubsystem* ViewportSubsystem = UGameViewportSubsystem::Get(World))
+		{
+			FGameViewportWidgetSlot MarkerSlot = ViewportSubsystem->GetWidgetSlot(Marker);
+			MarkerSlot.Alignment = FVector2D(0.5f, 0.5f);
+			ViewportSubsystem->SetWidgetSlot(Marker, MarkerSlot);
+		}
+
 		MarkerWidgets.Add(Key, Marker);
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("ObjectTracker::RegisterTarget: Marker created"));
-	}
-	else
-	{
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("ObjectTracker::RegisterTarget: CreateWidget failed"));
 	}
 }
 

@@ -1,4 +1,6 @@
 #include "RopeSolver.h"
+#include "Engine/Engine.h"
+
 
 FVector RopeSolver::SolveForce(
 	const FVector& ControlledPosition,
@@ -28,31 +30,18 @@ FVector RopeSolver::SolveForce(
 	return Dir * ForceMag;
 }
 
-FQuat RopeSolver::StepRotation(
-	const FQuat& CurrentRotation,
-	FVector& AngularVelocity,
-	const FVector& Force,
-	const FRopeSettings& Settings,
-	float DeltaTime)
+
+FVector RopeSolver::SolveDirection(
+		FVector CurrentUpDirection,
+		FVector TargetDirection,
+		FVector SolveSpeed)
 {
-	FVector AttachOffsetWorld = CurrentRotation.RotateVector(Settings.LocalAttachOffset);
-	FVector Torque = FVector::CrossProduct(AttachOffsetWorld, Force);
+	float MaximSpped = 500000.f;
 
-	FVector AngularAccel = Torque / Settings.RotationalInertia - AngularVelocity * Settings.RotDamping;
-	AngularVelocity += AngularAccel * DeltaTime;
+	// Float
+	// FVector
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, CurrentUpDirection.ToString());
 
-	float StepAngle = AngularVelocity.Size() * DeltaTime;
-
-	if (StepAngle <= KINDA_SMALL_NUMBER)
-	{
-		return CurrentRotation;
-	}
-
-	FVector StepAxis = AngularVelocity / AngularVelocity.Size();
-	FQuat DeltaRotation = FQuat(StepAxis, StepAngle);
-
-	FQuat NewRotation = DeltaRotation * CurrentRotation;
-	NewRotation.Normalize();
-
-	return NewRotation;
+	float ClampedValue = FMath::Clamp(SolveSpeed.Size() / MaximSpped, 0.0f, 1.0f);
+	return FMath::Lerp(CurrentUpDirection, TargetDirection, ClampedValue);
 }

@@ -14,6 +14,8 @@
 #include "Engine/Engine.h"
 #include "Components/CapsuleComponent.h"
 
+#pragma region コンストラクタ
+
 AMyCharacter::AMyCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UMyMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
@@ -34,7 +36,12 @@ AMyCharacter::AMyCharacter(const FObjectInitializer& ObjectInitializer)
 
 	// 初期値は地上仕様(true)。Rope中はUMyMovementComponent::TickComponentが毎ティックfalseに切り替える。
 	GetCharacterMovement()->bOrientRotationToMovement = true;
+
+	RopeStateDelegate.BindUObject(this, &AMyCharacter::GetPlayerRopeState);
 }
+
+#pragma endregion
+#pragma region BeginPlay
 
 void AMyCharacter::BeginPlay()
 {
@@ -56,9 +63,17 @@ void AMyCharacter::BeginPlay()
 
 	GetCapsuleComponent()->OnComponentHit.AddDynamic(this, &AMyCharacter::OnCapsuleHit);
 
+	// 遮蔽物越しでもPlayerが見えるよう、アウトライン用ポストプロセスマテリアルの参照先としてCustomDepthを有効化
+	GetMesh()->SetRenderCustomDepth(true);
+	GetMesh()->SetCustomDepthStencilValue(OutlineCustomDepthStencilValue);
+
 	itemTrackerComponent = GetComponentByClass<UItemTrackerComponent>();
 	gameRule = GetComponentByClass<UGameRuleComponent>();
+
+	SetDefaultVelocity(1000);
 }
+
+#pragma endregion
 
 void AMyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -82,21 +97,38 @@ void AMyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 			Component->BindInput(EnhancedInput);
 		}
 	}
+
+	
 }
 
 void AMyCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// RopeとChangeGravityは外部から明示的にセットされる状態のため、Tickでは上書きしない。
-	if (CurrentRopeState != PlayerRopeState::Rope && CurrentRopeState != PlayerRopeState::ChangeGravity)
+	// Rope・ChangeGravity・AntiGravityは外部から明示的にセットされる状態のため、Tickでは上書きしない。
+	if (CurrentRopeState != PlayerRopeState::Rope && CurrentRopeState != PlayerRopeState::ChangeGravity && CurrentRopeState != PlayerRopeState::AntiGravity)
 	{
 		CurrentRopeState = GetCharacterMovement()->IsFalling() ? PlayerRopeState::Fall : PlayerRopeState::Ground;
+	}
+
+	// RopeStateのモニタリング用。画面に現在の状態を表示する
+	if (GEngine)
+	{
+		const UEnum* RopeStateEnum = StaticEnum<PlayerRopeState>();
+		const FString RopeStateName = RopeStateEnum ? RopeStateEnum->GetNameStringByValue(static_cast<int64>(CurrentRopeState)) : TEXT("Unknown");
+		GEngine->AddOnScreenDebugMessage(1, 0.f, FColor::Cyan, FString::Printf(TEXT("RopeState: %s"), *RopeStateName));
 	}
 
 	for (TScriptInterface<ICharacterComponent>& Component : CharacterComponents)
 	{
 		Component->OnActionPassive();
+	}
+
+	APlayerController* PC = GetWorld()->GetFirstPlayerController();
+
+	if(PC)
+	{	
+		RectPlayerLocation = LocationCalucultior.CalculateBurstCenterUV(PC, GetActorLocation());
 	}
 }
 
@@ -115,7 +147,6 @@ void AMyCharacter::Landed(const FHitResult& Hit)
 void AMyCharacter::OnCapsuleHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
 	const FVector Velocity = GetCharacterMovement()->Velocity;
-
 	OnCharacterHit.Broadcast(Hit, Velocity);
 }
 
@@ -139,7 +170,7 @@ void AMyCharacter::DeathPhysics()
 
 void AMyCharacter::Goal()
 {
-   if(!gameRule->MissonCompleted()) return;
+//    if(!gameRule->MissonCompleted()) return;
    onGoal();
 }
 
@@ -151,4 +182,16 @@ PlayerRopeState AMyCharacter::GetPlayerRopeState() const
 void AMyCharacter::SetPlayerRopeState(PlayerRopeState NewState)
 {
 	CurrentRopeState = NewState;
+}
+
+FGetRopeStateDelegate& AMyCharacter::GetRopeStateDelegate()
+{
+	return RopeStateDelegate;
+}
+
+void AMyCharacter::SetDefaultVelocity(float Speed)
+{
+	FVector VelocityVector = GetActorForwardVector();
+
+	GetCharacterMovement()->Velocity = VelocityVector * Speed;
 }

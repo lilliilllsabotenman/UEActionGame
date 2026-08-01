@@ -4,6 +4,7 @@
 #pragma once
 
 #include "CharacterComponent.h"
+#include "StateObserver.h"
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "RopeSetting.h"
@@ -20,6 +21,7 @@ class UMaterialInterface;
 class UUserWidget;
 class UObjectTracker;
 class UHookActionLoggerComponent;
+class USoundBase;
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class SPACEGAMEPROJECT_API URopeSolverComponent : public UActorComponent, public ICharacterComponent
@@ -43,6 +45,8 @@ private:
 	bool bAncorIsMovement = false;
 
 	float MaxRopeResource = 0.f;
+
+	float _SpeedCache = 0.f;
 
 	UPROPERTY()
 	UCameraComponent* Camera = nullptr;
@@ -108,6 +112,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rope|Visual")
 	TSubclassOf<UUserWidget> ReticleWidgetClass;
 
+//=======Sound============
+
+	// Hook成功時にプレイヤー位置から再生する効果音
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rope|Sound")
+	USoundBase* HookSound = nullptr;
+
+	// Release時にプレイヤー位置から再生する効果音
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rope|Sound")
+	USoundBase* ReleaseSound = nullptr;
+
 //=======Input============
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
@@ -115,6 +129,16 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
 	UInputAction* Reel = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SwingSpeedSettings")
+	float MaxSpeed;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SwingSpeedSettings")
+	float MinSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RopeSpeed")
+	float SpeedCache = 0;
+
 
 	// カメラ正面にHookGuideFinderと同じ判定でレイを飛ばし、フック可能な対象があるかどうかだけを見る(実際にはフックしない)
 	UFUNCTION(BlueprintPure)
@@ -157,4 +181,8 @@ protected:
 public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+private:
+
+	void TrySwing();
 };

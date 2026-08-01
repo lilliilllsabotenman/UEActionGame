@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PlayerLocationCalculatior.h"
 #include "CharacterComponent.h"
 #include "CoreMinimal.h"
 #include "UObject/ScriptInterface.h"
@@ -9,6 +10,7 @@
 #include "RotationCompositorComponent.h"
 #include "GameRuleComponent.h"
 #include "ItemTrackerComponent.h"
+#include "StateObserver.h"
 
 #include "MyMovementComponent.h"
 
@@ -31,11 +33,12 @@ enum class PlayerRopeState : uint8
 	Rope,
 	Ground,
 	Fall,
-	ChangeGravity
+	ChangeGravity,
+	AntiGravity
 };
 
 UCLASS()
-class SPACEGAMEPROJECT_API AMyCharacter : public ACharacter
+class SPACEGAMEPROJECT_API AMyCharacter : public ACharacter, public IStateObserver
 {
 	GENERATED_BODY()
 
@@ -69,6 +72,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera")
 	USpringArmComponent* SpringArm = nullptr;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+	FVector RectPlayerLocation = FVector::ZeroVector;
+
 	// UPROPERTY(VisibleAnywhere, BlueprintReadOnlym Category = "VALUE")
 
 	USkeletalMeshComponent* Mesh = GetMesh();
@@ -90,6 +96,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Rope")
 	float GrappleTraceDistance = 10000.f;
+
+	// 遮蔽物越しアウトライン用。ポストプロセスマテリアル側でこのスタンシル値を参照する
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
+	int32 OutlineCustomDepthStencilValue = 1;
 
 	FVector HookTargetLocation = FVector::ZeroVector;
 
@@ -124,6 +134,15 @@ public:
 
 	void SetPlayerRopeState(PlayerRopeState NewState);
 
+	// IStateObserver: ComponentがRopeStateを任意タイミングでPullするためのデリゲートを返す
+	virtual FGetRopeStateDelegate& GetRopeStateDelegate() override;
+
+	// PlayerRopeStateとは独立した無重力フラグ。Rope使用等でRopeStateが変わっても無重力状態を維持するために使う。
+	UFUNCTION(BlueprintPure, Category = "Rope")
+	bool IsWeightless() const { return bIsWeightless; }
+
+	void SetWeightless(bool bNewWeightless) { bIsWeightless = bNewWeightless; }
+
 	UObjectTracker* GetObjectTracker() const { return ObjectTracker; }
 
 private:
@@ -131,6 +150,10 @@ private:
 	bool bHasGoalItem=false;
 
 	PlayerRopeState CurrentRopeState = PlayerRopeState::Ground;
+
+	FGetRopeStateDelegate RopeStateDelegate;
+
+	bool bIsWeightless = false;
 
 	UPROPERTY()
 	TArray<TScriptInterface<ICharacterComponent>> CharacterComponents;
@@ -143,6 +166,10 @@ private:
 	// void ChangeGravityEnd();
 	// FVector GetLookActorLocation(float TraceDistance);
 	// void PlayerGravitySolver();
+
+	PlayerLocationCalculatior LocationCalucultior;
+
+	void SetDefaultVelocity(float Speed);
 
 	UFUNCTION()
 	void OnCapsuleHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);

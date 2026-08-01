@@ -3,6 +3,7 @@
 
 #include "ChangeGravityComponent.h"
 #include "MyCharacter.h"
+#include "AntiGravityFloor.h"
 
 // Sets default values for this component's properties
 UChangeGravityComponent::UChangeGravityComponent()
@@ -60,18 +61,25 @@ void UChangeGravityComponent::SetGravityDirection(FVector newGravityDirection)
         RotationHub->AddPlayerRotation(Delta);
     }
 
-    MovementComponent->SetGravityDirection(newGravityDirection);
+    // MovementComponent->SetGravityDirection(newGravityDirection);
 
-    Cast<AMyCharacter>(GetOwner()) -> SetPlayerRopeState(PlayerRopeState::Ground);
+    // MovementComponent->GravityScale = 1.f;
+
+    if (OwnerCharacter)
+    {
+        OwnerCharacter->SetWeightless(false);
+        OwnerCharacter->SetPlayerRopeState(PlayerRopeState::Ground);
+    }
 }
 
 void UChangeGravityComponent::PlayerGravitySolver()
 {
-    return;
-    if (!MovementComponent) return;
+    FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(GetWorld());
+
+    if (CurrentLevelName != TEXT("Hard")) return;
     const float TraceDistance = 150.f;
     const float SampleOffset = 150.f;
-    const float MaxSurfaceAngle = 45.f;
+    const float MaxSurfaceAngle = 36.f;
     TArray<FVector> Normals;
     const FVector GravityDir = MovementComponent->GetGravityDirection().GetSafeNormal();
     const FTransform OwnerTransform = GetOwner()->GetActorTransform();
@@ -124,12 +132,40 @@ void UChangeGravityComponent::HandleCharacterLanded(const FHitResult& Hit)
     bIsConvergingGravity = true;
 }
 
+void UChangeGravityComponent::NotifyAntiGravityFloorEntered(AAntiGravityFloor* Floor)
+{
+    if (!Floor || !OwnerCharacter) return;
+
+    if (Floor->IsAntiGravity)
+    {
+        // 無重力化専用の床: まだ無重力でなければ入る(すでに無重力なら何もしない)
+        if (!OwnerCharacter->IsWeightless() && MovementComponent)
+        {
+            OwnerCharacter->SetPlayerRopeState(PlayerRopeState::AntiGravity);
+            OwnerCharacter->SetWeightless(true);
+            MovementComponent->GravityScale = 0.f;
+        }
+    }
+    else
+    {
+        // 重力復帰専用の床: 無重力状態のときだけ、床のUp方向(エディタで回転指定)を重力の戻し先にする
+        if (OwnerCharacter->IsWeightless())
+        {
+            SetGravityDirection(-Floor->GetActorUpVector());
+        }
+    }
+}
+
 void UChangeGravityComponent::HandleCharacterHit(const FHitResult& Hit, const FVector& Velocity)
 {
-    // if (!OwnerCharacter || OwnerCharacter->GetPlayerRopeState() != PlayerRopeState::ChangeGravity) return;
+    if (!OwnerCharacter) return;
 
-    // const FVector AverageNormal = GetAverageImpactNormal(Hit);
-    // SetGravityDirection(-AverageNormal);
+    // ハード難易度のときだけ、接地面の法線に重力方向を合わせる
+    const FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(GetWorld());
+    if (CurrentLevelName != TEXT("Hard")) return;
+
+    const FVector AverageNormal = GetAverageImpactNormal(Hit);
+    SetGravityDirection(-AverageNormal);
 }
 
 FVector UChangeGravityComponent::GetAverageImpactNormal(const FHitResult& Hit)

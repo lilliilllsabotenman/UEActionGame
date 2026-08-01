@@ -3,6 +3,7 @@
 
 #include "RopeSolverComponent.h"
 
+#include "ChangeGravityComponent.h"
 #include "MyCharacter.h"
 #include "ObjectTracker.h"
 #include "HookGuideFinder.h"
@@ -14,6 +15,7 @@
 #include "RotationCompositorComponent.h"
 #include "RotationEventHub.h"
 #include "HookActionLoggerComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values for this component's properties
 URopeSolverComponent::URopeSolverComponent()
@@ -66,6 +68,8 @@ void URopeSolverComponent::BeginPlay()
 void URopeSolverComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+    
+    TrySwing();
 
     if (!bIsHooked) return;
 
@@ -169,6 +173,13 @@ bool URopeSolverComponent::TryHook(FVector TraceDirection)
         HookLogger->LogHookAction(TargetPosition);
     }
 
+    if (HookSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, HookSound, Owner->GetActorLocation());
+    }
+
+
+
     return true;
 }
 
@@ -194,15 +205,8 @@ void URopeSolverComponent::ReleaseHook()
 
     if (AMyCharacter* OwnerCharacter = Cast<AMyCharacter>(GetOwner()))
     {
-        if (IsMovingFast())
-        {
-            OwnerCharacter->SetPlayerRopeState(PlayerRopeState::ChangeGravity);
-        }
-        else
-        {
-            const bool bIsFalling = OwnerCharacter->GetCharacterMovement()->IsFalling();
-            OwnerCharacter->SetPlayerRopeState(bIsFalling ? PlayerRopeState::Fall : PlayerRopeState::Ground);
-        }
+        const bool bIsFalling = OwnerCharacter->GetCharacterMovement()->IsFalling();
+        OwnerCharacter->SetPlayerRopeState(bIsFalling ? PlayerRopeState::Fall : PlayerRopeState::Ground);
     }
 
     if (RotationCompositor)
@@ -218,6 +222,11 @@ void URopeSolverComponent::ReleaseHook()
     if (Tracker)
     {
         Tracker->UnregisterTarget(this);
+    }
+
+    if (ReleaseSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, ReleaseSound, GetOwner()->GetActorLocation());
     }
 
     releaseDelegate.ExecuteIfBound();
@@ -262,27 +271,50 @@ void URopeSolverComponent::SetForce(bool pulling, float DeltaTime)
             return;
         }
 
-        const FQuat CurrentRotation = RotationCompositor ? RotationCompositor->GetQuat() : Owner->GetActorQuat();
+        const FVector BankForwardDir = Owner->GetActorForwardVector();
+        const FVector GravityUp = -MoveComp->GetGravityDirection();
+        const FVector CurrentUp = RotationCompositor ? RotationCompositor->GetQuat().GetUpVector() : Owner->GetActorUpVector();
 
-        // SolvedLeanRotation = RopeSolver::StepRotation(
-        //     CurrentRotation,
-        //     AngularVelocity,
-        //     Force,
-        //     Settings,
-        //     DeltaTime
-        // );
+        AActor* OwnCharacter = GetOwner();
+        
+        if(OwnCharacter)
+        {
+             FVector SolveDirection = RopeSolver::SolveDirection(
+                OwnCharacter -> GetActorUpVector(),
+                (TargetPosition - OwnCharacter -> GetActorLocation()).GetSafeNormal(),
+                Force
+            );
 
-        // if (RotationCompositor)
-        // {
-        //     // SolvedLeanRotationは絶対姿勢なので、Compositorの現在値からのDeltaに変換してAddQuatに渡す。
-        //     const FQuat Delta = IRotationEventHub::ConvertTargetToDelta(RotationCompositor->GetQuat(), SolvedLeanRotation);
-        //     RotationCompositor->AddQuat(Delta);
-        // }
+            if (RotationCompositor)
+            {
+                FVector newDirection = OwnCharacter -> GetActorUpVector() + (SolveDirection - OwnCharacter -> GetActorUpVector()) / 15;
+                GetOwner()->FindComponentByClass<UChangeGravityComponent>() -> SetGravityDirection(-newDirection);
+            }
+        }
+
+
 
         SolvedTargetVelocity = FVector::ZeroVector;
     }
 
     if (!bAncorIsMovement) return;
+}
+
+void URopeSolverComponent::TrySwing()
+{
+    FVector Velocity = Cast<AMyCharacter>(GetOwner()) -> GetCharacterMovement() -> Velocity;
+
+    if(bIsHooked)
+    {
+        _SpeedCache -= Velocity.Size() / MaxSpeed + _SpeedCache / 50;
+        SpeedCache = _SpeedCache;
+    }
+
+    else
+    {
+        _SpeedCache -= 0 + _SpeedCache / 20;
+        SpeedCache = _SpeedCache;
+    }
 }
 
 bool URopeSolverComponent::IsHooked() const

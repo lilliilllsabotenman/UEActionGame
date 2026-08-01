@@ -10,6 +10,7 @@
 #include "ChangeGravityComponent.generated.h"
 
 class AMyCharacter;
+class AAntiGravityFloor;
 
 DECLARE_MULTICAST_DELEGATE(FOnChangeGravityEvent);
 
@@ -24,6 +25,8 @@ public:
 
 	FOnChangeGravityEvent OnChangeGravityEvent;
 
+	void NotifyAntiGravityFloorEntered(AAntiGravityFloor* Floor);
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -31,7 +34,8 @@ protected:
 public:	
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
+	void SetGravityDirection(FVector newGravityDirection);
+	
 private:
 
 	UPROPERTY()
@@ -56,11 +60,10 @@ private:
 	float ImpactSampleAngle = 15.0f;
 
 	bool bIsConvergingGravity = false;
-	
 
 private:
 
-	void SetGravityDirection(FVector newGravityDirection);
+
 	void PlayerGravitySolver();
 
 	FRotator CalculateUprightRotation(FVector Direction);

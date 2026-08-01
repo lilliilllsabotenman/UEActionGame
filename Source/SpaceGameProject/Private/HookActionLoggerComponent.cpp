@@ -15,6 +15,11 @@ FString UHookActionLoggerComponent::GetLogFilePath()
 	return FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("HookActionLog"), TEXT("HookActions.jsonl"));
 }
 
+void UHookActionLoggerComponent::ClearLog()
+{
+	IFileManager::Get().Delete(*GetLogFilePath());
+}
+
 void UHookActionLoggerComponent::LogHookAction(const FVector& Position)
 {
 #if !UE_BUILD_SHIPPING
